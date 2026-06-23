@@ -354,6 +354,14 @@ export async function translateDescriptionToChinese(englishText: string, dishNam
     retryHint = `Previous attempt failed review: ${review.issues.join('; ')}`
   }
 
+  if (shouldUseSegmentedTranslation(englishText)) {
+    const segmented = await translateLongEnglishBySegments(model, englishText, dishName, dishNameCn)
+    const segmentedIssues = getChineseTranslationIssues(segmented, englishText)
+    if (segmented && segmentedIssues.length === 0) {
+      return segmented
+    }
+  }
+
   return lastCandidate
 }
 
@@ -416,7 +424,98 @@ function getChineseTranslationIssues(chineseText: string, englishText: string): 
     issues.push('missing multi-part structure from the English source')
   }
 
+  if (englishWordCount >= 18 && !/[。！？…”」』]$/.test(chineseText)) {
+    issues.push('long translation does not end like a complete sentence')
+  }
+
   return issues
+}
+
+function shouldUseSegmentedTranslation(englishText: string): boolean {
+  const englishWordCount = (englishText.match(/[A-Za-z]+/g) || []).length
+  const punctuationCount = (englishText.match(/[,;:—-]/g) || []).length
+  return englishWordCount >= 20 || punctuationCount >= 3
+}
+
+async function translateLongEnglishBySegments(
+  model: ReturnType<ReturnType<typeof getGeminiClient>['getGenerativeModel']>,
+  englishText: string,
+  dishName: string,
+  dishNameCn: string,
+): Promise<string> {
+  const segments = splitEnglishIntoTranslatableSegments(englishText)
+  if (segments.length <= 1) {
+    return ''
+  }
+
+  const translatedSegments: string[] = []
+
+  for (const segment of segments) {
+    const trimmed = segment.trim()
+    if (!trimmed) continue
+
+    let translated = ''
+    let retryHint = ''
+
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      const result = await model.generateContent(
+        buildStrictChineseTranslationPrompt(trimmed, dishName, dishNameCn, retryHint)
+      )
+      translated = normalizeChineseTranslation(result.response.text())
+      const issues = getChineseTranslationIssues(translated, trimmed)
+      if (issues.length === 0) break
+      retryHint = `Previous segment attempt failed these checks: ${issues.join('; ')}`
+    }
+
+    translatedSegments.push(translated)
+  }
+
+  return translatedSegments
+    .filter(Boolean)
+    .join('，')
+    .replace(/，([。！？])/g, '$1')
+}
+
+function splitEnglishIntoTranslatableSegments(englishText: string): string[] {
+  const normalized = englishText
+    .replace(/\s+/g, ' ')
+    .replace(/\s*—\s*/g, ' — ')
+    .trim()
+
+  const rawParts = normalized
+    .split(/(?<=,|;|:|—)\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  if (rawParts.length <= 1) {
+    return [normalized]
+  }
+
+  const merged: string[] = []
+  let buffer = ''
+
+  for (const part of rawParts) {
+    const candidate = buffer ? `${buffer} ${part}` : part
+    const wordCount = (candidate.match(/[A-Za-z]+/g) || []).length
+
+    if (wordCount < 8) {
+      buffer = candidate
+      continue
+    }
+
+    merged.push(candidate)
+    buffer = ''
+  }
+
+  if (buffer) {
+    if (merged.length > 0) {
+      merged[merged.length - 1] = `${merged[merged.length - 1]} ${buffer}`.trim()
+    } else {
+      merged.push(buffer)
+    }
+  }
+
+  return merged
 }
 
 async function reviewChineseTranslation(
