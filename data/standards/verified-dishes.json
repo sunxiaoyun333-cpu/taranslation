@@ -199,6 +199,46 @@
       "created_at": "2024-12-01T00:00:00Z",
       "updated_at": "2024-12-01T00:00:00Z",
       "query_count": 0
+    },
+    {
+      "id": "dish_011",
+      "name_cn": "夫妻肺片",
+      "name_en_standard": "Sliced Beef in Chili Sauce",
+      "name_en_alternatives": ["Fuqi Feipian", "Sichuan Beef Offal Salad", "Beef and Tripe in Chili Sauce"],
+      "pinyin": "fu qi fei pian",
+      "category": "Appetizer",
+      "cuisine": "Sichuan",
+      "ingredients_standard": ["beef shank", "beef tripe", "chili oil", "Sichuan peppercorn", "garlic", "soy sauce", "peanuts", "cilantro", "sesame oil"],
+      "allergens_standard": ["Soybeans", "Peanuts", "Sesame"],
+      "spice_level": 4,
+      "description_short": "Thinly sliced beef and tripe tossed in a bold Sichuan chili oil dressing with numbing peppercorn aroma.",
+      "description_marketing": "A cold Sichuan classic with serious attitude — tender slices of beef and tripe layered in scarlet chili oil, roasted peanuts, garlic, and tongue-tingling peppercorns for a savory, fiery finish that wakes up the palate.",
+      "source": ["verified"],
+      "confidence": 1.0,
+      "verified": true,
+      "created_at": "2024-12-01T00:00:00Z",
+      "updated_at": "2024-12-01T00:00:00Z",
+      "query_count": 0
+    },
+    {
+      "id": "dish_012",
+      "name_cn": "鱼香茄子",
+      "name_en_standard": "Yu-Shiang Eggplant",
+      "name_en_alternatives": ["Fish-Fragrant Eggplant", "Sichuan Garlic Eggplant", "Yuxiang Eggplant"],
+      "pinyin": "yu xiang qie zi",
+      "category": "Main Course",
+      "cuisine": "Sichuan",
+      "ingredients_standard": ["eggplant", "garlic", "ginger", "scallion", "chili bean paste", "soy sauce", "vinegar", "sugar"],
+      "allergens_standard": ["Soybeans"],
+      "spice_level": 2,
+      "description_short": "Silky eggplant braised in a sweet-savory garlic sauce with vinegar tang and gentle Sichuan heat.",
+      "description_marketing": "One of Sichuan cuisine's most addictive comfort dishes — tender eggplant soaked in a glossy yu-shiang sauce that balances garlic, ginger, chili bean paste, black vinegar, and a hint of sweetness in every rich bite.",
+      "source": ["verified"],
+      "confidence": 1.0,
+      "verified": true,
+      "created_at": "2024-12-01T00:00:00Z",
+      "updated_at": "2024-12-01T00:00:00Z",
+      "query_count": 0
     }
   ]
 }
