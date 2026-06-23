@@ -1,21 +1,33 @@
 import { createGeminiClient } from './gemini-client'
 
-const genAI = createGeminiClient()
+let geminiClient: ReturnType<typeof createGeminiClient> | null = null
 
-const flashModel = genAI.getGenerativeModel({
-  model: 'gemini-2.5-flash',
-  generationConfig: {
-    temperature: 0.3,
-    topP: 0.95,
-    topK: 40,
-    maxOutputTokens: 4096,
-    responseMimeType: 'application/json',
-  },
-})
+function getGeminiClient() {
+  if (!geminiClient) {
+    geminiClient = createGeminiClient()
+  }
 
-const embeddingModel = genAI.getGenerativeModel({
-  model: 'text-embedding-004',
-})
+  return geminiClient
+}
+
+function getFlashModel() {
+  return getGeminiClient().getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    generationConfig: {
+      temperature: 0.3,
+      topP: 0.95,
+      topK: 40,
+      maxOutputTokens: 4096,
+      responseMimeType: 'application/json',
+    },
+  })
+}
+
+function getEmbeddingModel() {
+  return getGeminiClient().getGenerativeModel({
+    model: 'text-embedding-004',
+  })
+}
 
 export interface LLMTranslationInput {
   query: string
@@ -212,6 +224,7 @@ RULES:
 Now translate the dish with COMPELLING marketing copy that makes people CRAVE it:`
 
 export async function translateDish(input: LLMTranslationInput): Promise<LLMTranslationOutput> {
+  const flashModel = getFlashModel()
   const userMessage = JSON.stringify({
     query: input.query,
     category: input.category || 'unknown',
@@ -245,12 +258,13 @@ export async function translateDish(input: LLMTranslationInput): Promise<LLMTran
 }
 
 export async function generateEmbedding(text: string): Promise<number[]> {
+  const embeddingModel = getEmbeddingModel()
   const result = await embeddingModel.embedContent(text)
   return result.embedding.values
 }
 
 export async function generateFAQ(query: string, dishName?: string): Promise<string> {
-  const faqModel = genAI.getGenerativeModel({
+  const faqModel = getGeminiClient().getGenerativeModel({
     model: 'gemini-2.5-flash',
     generationConfig: {
       temperature: 0.7,
@@ -269,7 +283,7 @@ export async function generateMarketingCopy(
   dishNameCn: string,
   description: string
 ): Promise<{ headline: string; body: string }> {
-  const model = genAI.getGenerativeModel({
+  const model = getGeminiClient().getGenerativeModel({
     model: 'gemini-2.5-flash',
     generationConfig: {
       temperature: 0.7,
@@ -307,7 +321,7 @@ Return JSON only:
 export async function translateDescriptionToChinese(englishText: string, dishName: string, dishNameCn: string): Promise<string> {
   if (!englishText?.trim()) return ''
 
-  const model = genAI.getGenerativeModel({
+  const model = getGeminiClient().getGenerativeModel({
     model: 'gemini-2.5-flash',
     generationConfig: {
       temperature: 0.1,
