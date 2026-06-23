@@ -1,0 +1,114 @@
+{
+  "major_allergens": [
+    {
+      "id": "milk",
+      "name": "Milk",
+      "name_cn": "牛奶",
+      "category": "dairy",
+      "fda_code": "MILK",
+      "common_sources": ["milk", "cheese", "butter", "cream", "yogurt", "whey", "casein"],
+      "chinese_sources": ["牛奶", "奶酪", "黄油", "奶油", "酸奶", "乳清", "酪蛋白"],
+      "warning_text": "Contains milk. Not suitable for lactose intolerant individuals.",
+      "severity": "high",
+      "alternative_names": ["dairy", "lactose"]
+    },
+    {
+      "id": "eggs",
+      "name": "Eggs",
+      "name_cn": "鸡蛋",
+      "category": "eggs",
+      "fda_code": "EGGS",
+      "common_sources": ["egg", "egg white", "egg yolk", "albumin", "mayonnaise"],
+      "chinese_sources": ["鸡蛋", "蛋清", "蛋黄", "蛋白", "蛋黄酱"],
+      "warning_text": "Contains eggs.",
+      "severity": "high",
+      "alternative_names": ["ova", "albumin"]
+    },
+    {
+      "id": "fish",
+      "name": "Fish",
+      "name_cn": "鱼类",
+      "category": "fish",
+      "fda_code": "FISH",
+      "common_sources": ["salmon", "tuna", "cod", "bass", "fish sauce"],
+      "chinese_sources": ["三文鱼", "金枪鱼", "鳕鱼", "鲈鱼", "鱼露"],
+      "warning_text": "Contains fish.",
+      "severity": "high",
+      "alternative_names": []
+    },
+    {
+      "id": "shellfish",
+      "name": "Crustacean Shellfish",
+      "name_cn": "甲壳类海鲜",
+      "category": "shellfish",
+      "fda_code": "CRUSTACEAN_SHELLFISH",
+      "common_sources": ["shrimp", "crab", "lobster", "crawfish", "oyster sauce"],
+      "chinese_sources": ["虾", "螃蟹", "龙虾", "小龙虾", "蚝油"],
+      "warning_text": "Contains shellfish.",
+      "severity": "high",
+      "alternative_names": ["seafood"]
+    },
+    {
+      "id": "tree_nuts",
+      "name": "Tree Nuts",
+      "name_cn": "坚果",
+      "category": "tree_nuts",
+      "fda_code": "TREE_NUTS",
+      "common_sources": ["almond", "walnut", "cashew", "pistachio", "pecan"],
+      "chinese_sources": ["杏仁", "核桃", "腰果", "开心果", "山核桃"],
+      "warning_text": "Contains tree nuts.",
+      "severity": "high",
+      "alternative_names": ["nuts"]
+    },
+    {
+      "id": "peanuts",
+      "name": "Peanuts",
+      "name_cn": "花生",
+      "category": "peanuts",
+      "fda_code": "PEANUTS",
+      "common_sources": ["peanut", "peanut butter", "peanut oil"],
+      "chinese_sources": ["花生", "花生酱", "花生油"],
+      "warning_text": "Contains peanuts.",
+      "severity": "high",
+      "alternative_names": ["groundnut"]
+    },
+    {
+      "id": "wheat",
+      "name": "Wheat",
+      "name_cn": "小麦",
+      "category": "wheat",
+      "fda_code": "WHEAT",
+      "common_sources": ["wheat", "flour", "bread", "noodles", "wheat starch"],
+      "chinese_sources": ["小麦", "面粉", "面包", "面条", "小麦淀粉"],
+      "warning_text": "Contains wheat. Contains gluten.",
+      "severity": "high",
+      "alternative_names": ["gluten"]
+    },
+    {
+      "id": "soybeans",
+      "name": "Soybeans",
+      "name_cn": "大豆",
+      "category": "soy",
+      "fda_code": "SOYBEANS",
+      "common_sources": ["soy sauce", "tofu", "soybean oil", "edamame", "miso"],
+      "chinese_sources": ["酱油", "豆腐", "豆油", "毛豆", "味噌"],
+      "warning_text": "Contains soy.",
+      "severity": "medium",
+      "alternative_names": ["soya"]
+    },
+    {
+      "id": "sesame",
+      "name": "Sesame",
+      "name_cn": "芝麻",
+      "category": "sesame",
+      "fda_code": "SESAME",
+      "common_sources": ["sesame seeds", "sesame oil", "tahini"],
+      "chinese_sources": ["芝麻", "芝麻油", "芝麻酱"],
+      "warning_text": "Contains sesame.",
+      "severity": "medium",
+      "alternative_names": []
+    }
+  ],
+  "fda_disclaimer": "Consuming foods containing allergens may cause serious or life-threatening reactions in persons with food allergies.",
+  "fda_disclaimer_cn": "食用含有过敏原的食物可能会在食物过敏者中引起严重或危及生命的反应。"
+}

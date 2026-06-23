@@ -1,0 +1,161 @@
+[
+  {
+    "id": "dish_001",
+    "name_cn": "麻婆豆腐",
+    "name_en": "Mapo Tofu",
+    "category": "Main Course",
+    "ingredients": ["tofu", "ground pork", "doubanjiang", "Sichuan peppercorn", "scallion", "soy sauce", "chili oil"],
+    "allergens": [
+      { "name": "Soybeans", "type": "soy", "severity": "medium", "source": "tofu, soy sauce", "confidence": "high" }
+    ],
+    "spice_level": 4,
+    "description_short": "Silky tofu in a fiery Sichuan chili bean sauce with numbing peppercorns.",
+    "description_marketing": "A legendary Sichuan classic — tender cubes of silken tofu swimming in a bold, spicy chili bean paste sauce, numbed to perfection with Sichuan peppercorns for that iconic mala sensation.",
+    "translation_alternatives": ["Pock-Marked Grandma's Tofu", "Spicy Sichuan Tofu"],
+    "created_at": "2024-12-01T00:00:00Z"
+  },
+  {
+    "id": "dish_002",
+    "name_cn": "宫保鸡丁",
+    "name_en": "Kung Pao Chicken",
+    "category": "Main Course",
+    "ingredients": ["chicken breast", "peanuts", "dried chili", "scallion", "soy sauce", "vinegar", "sugar", "garlic", "ginger"],
+    "allergens": [
+      { "name": "Peanuts", "type": "peanuts", "severity": "high", "source": "peanuts", "confidence": "high" },
+      { "name": "Soybeans", "type": "soy", "severity": "medium", "source": "soy sauce", "confidence": "high" }
+    ],
+    "spice_level": 2,
+    "description_short": "Tender diced chicken wok-tossed with roasted peanuts and dried chilies in a sweet-savory sauce.",
+    "description_marketing": "The dish that conquered America — juicy chicken morsels stir-fried to perfection with crunchy roasted peanuts, aromatic dried chilies, and a masterful balance of sweet, savory, and tangy flavors.",
+    "translation_alternatives": ["Spicy Diced Chicken", "Gong Bao Chicken"],
+    "created_at": "2024-12-01T00:00:00Z"
+  },
+  {
+    "id": "dish_003",
+    "name_cn": "北京烤鸭",
+    "name_en": "Peking Duck",
+    "category": "Main Course",
+    "ingredients": ["duck", "pancakes", "hoisin sauce", "scallion", "cucumber", "soy sauce"],
+    "allergens": [
+      { "name": "Soybeans", "type": "soy", "severity": "medium", "source": "hoisin sauce, soy sauce", "confidence": "high" },
+      { "name": "Wheat", "type": "wheat", "severity": "high", "source": "pancakes", "confidence": "high" }
+    ],
+    "spice_level": 0,
+    "description_short": "Crispy-skinned roast duck served with thin pancakes, hoisin sauce, and fresh vegetables.",
+    "description_marketing": "The crown jewel of Beijing cuisine — whole duck roasted to lacquered, crispy perfection, carved tableside and wrapped in delicate pancakes with sweet hoisin sauce and crisp vegetables.",
+    "translation_alternatives": ["Beijing Roast Duck", "Peking Roast Duck"],
+    "created_at": "2024-12-01T00:00:00Z"
+  },
+  {
+    "id": "dish_004",
+    "name_cn": "小笼包",
+    "name_en": "Soup Dumplings",
+    "category": "Appetizer",
+    "ingredients": ["pork", "flour", "gelatin", "ginger", "soy sauce", "sesame oil"],
+    "allergens": [
+      { "name": "Wheat", "type": "wheat", "severity": "high", "source": "flour", "confidence": "high" },
+      { "name": "Soybeans", "type": "soy", "severity": "medium", "source": "soy sauce", "confidence": "high" },
+      { "name": "Sesame", "type": "sesame", "severity": "medium", "source": "sesame oil", "confidence": "high" }
+    ],
+    "spice_level": 0,
+    "description_short": "Delicate steamed dumplings filled with savory pork and hot, rich broth.",
+    "description_marketing": "Shanghai's greatest gift to dumpling lovers — hand-pleated, tissue-thin wrappers holding a treasure of seasoned pork and impossibly rich soup that bursts warm in every bite.",
+    "translation_alternatives": ["Xiao Long Bao", "Shanghai Soup Dumplings", "XLB"],
+    "created_at": "2024-12-01T00:00:00Z"
+  },
+  {
+    "id": "dish_005",
+    "name_cn": "干炒牛河",
+    "name_en": "Beef Chow Fun",
+    "category": "Noodles/Rice",
+    "ingredients": ["beef", "wide rice noodles", "bean sprouts", "scallion", "soy sauce", "dark soy sauce", "garlic"],
+    "allergens": [
+      { "name": "Soybeans", "type": "soy", "severity": "medium", "source": "soy sauce", "confidence": "high" }
+    ],
+    "spice_level": 1,
+    "description_short": "Wok-seared wide rice noodles with tender beef and bean sprouts in savory soy sauce.",
+    "description_marketing": "The smoky wok hei magic of Hong Kong streets — silky wide rice noodles charred at high heat with tender beef strips, crisp bean sprouts, and the unmistakable depth of dark soy.",
+    "translation_alternatives": ["Stir-Fried Rice Noodles with Beef", "Dry-Fried Beef Ho Fun"],
+    "created_at": "2024-12-01T00:00:00Z"
+  },
+  {
+    "id": "dish_006",
+    "name_cn": "酸辣汤",
+    "name_en": "Hot and Sour Soup",
+    "category": "Soup",
+    "ingredients": ["tofu", "egg", "bamboo shoots", "wood ear mushroom", "pork", "vinegar", "white pepper", "soy sauce"],
+    "allergens": [
+      { "name": "Soybeans", "type": "soy", "severity": "medium", "source": "tofu, soy sauce", "confidence": "high" },
+      { "name": "Eggs", "type": "eggs", "severity": "high", "source": "egg", "confidence": "high" }
+    ],
+    "spice_level": 2,
+    "description_short": "A bold, peppery broth with silky tofu, tender pork, and earthy mushrooms.",
+    "description_marketing": "The yin-yang of Chinese soups — a punchy, soul-warming bowl where fiery white pepper meets tangy black vinegar, loaded with silken tofu ribbons, tender pork shreds, and cloud-like egg blossoms.",
+    "translation_alternatives": ["Sour and Spicy Soup", "Chinese Hot and Sour Soup"],
+    "created_at": "2024-12-01T00:00:00Z"
+  },
+  {
+    "id": "dish_007",
+    "name_cn": "春卷",
+    "name_en": "Spring Rolls",
+    "category": "Appetizer",
+    "ingredients": ["pork", "cabbage", "carrot", "mushroom", "wheat wrapper", "soy sauce", "vegetable oil"],
+    "allergens": [
+      { "name": "Wheat", "type": "wheat", "severity": "high", "source": "wheat wrapper", "confidence": "high" },
+      { "name": "Soybeans", "type": "soy", "severity": "medium", "source": "soy sauce", "confidence": "high" }
+    ],
+    "spice_level": 0,
+    "description_short": "Crispy golden rolls filled with seasoned pork and shredded vegetables.",
+    "description_marketing": "The crunch heard 'round every Chinese table — golden-fried wrappers crackling to reveal tender shredded pork and crisp vegetables, perfectly paired with sweet chili dipping sauce.",
+    "translation_alternatives": ["Crispy Spring Rolls", "Chinese Egg Rolls", "Chun Juan"],
+    "created_at": "2024-12-01T00:00:00Z"
+  },
+  {
+    "id": "dish_008",
+    "name_cn": "扬州炒饭",
+    "name_en": "Yangzhou Fried Rice",
+    "category": "Noodles/Rice",
+    "ingredients": ["rice", "egg", "shrimp", "char siu pork", "pea", "carrot", "scallion", "soy sauce"],
+    "allergens": [
+      { "name": "Eggs", "type": "eggs", "severity": "high", "source": "egg", "confidence": "high" },
+      { "name": "Crustacean Shellfish", "type": "shellfish", "severity": "high", "source": "shrimp", "confidence": "high" },
+      { "name": "Soybeans", "type": "soy", "severity": "medium", "source": "soy sauce", "confidence": "high" }
+    ],
+    "spice_level": 0,
+    "description_short": "Wok-hei kissed fried rice with shrimp, BBQ pork, egg, and colorful vegetables.",
+    "description_marketing": "A symphony in a wok — each grain of rice separately kissed by flame, mingling with succulent shrimp, sweet char siu pork, golden egg threads, and a garden of diced vegetables.",
+    "translation_alternatives": ["House Special Fried Rice", "Young Chow Fried Rice"],
+    "created_at": "2024-12-01T00:00:00Z"
+  },
+  {
+    "id": "dish_009",
+    "name_cn": "水煮鱼",
+    "name_en": "Sichuan Boiled Fish",
+    "category": "Main Course",
+    "ingredients": ["white fish fillet", "bean sprouts", "Sichuan peppercorn", "dried chili", "chili oil", "garlic", "ginger", "soy sauce"],
+    "allergens": [
+      { "name": "Fish", "type": "fish", "severity": "high", "source": "white fish fillet", "confidence": "high" },
+      { "name": "Soybeans", "type": "soy", "severity": "medium", "source": "soy sauce", "confidence": "high" }
+    ],
+    "spice_level": 5,
+    "description_short": "Tender fish fillets poached in a blazing Sichuan chili oil broth with numbing pepper.",
+    "description_marketing": "Don't let the name fool you — this is not boiled but baptized in fire. Silky fish fillets float in a sea of electrifying chili oil, crowned with sizzling dried chilies and tongue-tingling Sichuan peppercorns.",
+    "translation_alternatives": ["Sichuan Fish in Chili Oil", "Water-Boiled Fish", "Shui Zhu Yu"],
+    "created_at": "2024-12-01T00:00:00Z"
+  },
+  {
+    "id": "dish_010",
+    "name_cn": "叉烧",
+    "name_en": "Char Siu",
+    "category": "Main Course",
+    "ingredients": ["pork shoulder", "hoisin sauce", "honey", "soy sauce", "five spice powder", "red fermented tofu", "garlic"],
+    "allergens": [
+      { "name": "Soybeans", "type": "soy", "severity": "medium", "source": "hoisin sauce, soy sauce, red fermented tofu", "confidence": "high" }
+    ],
+    "spice_level": 1,
+    "description_short": "Cantonese-style honey-glazed barbecue pork with a shiny, caramelized red crust.",
+    "description_marketing": "The ruby jewel of Cantonese barbecue — pork shoulder marinated in a secret blend of sweet and savory seasonings, slow-roasted to sticky, lacquered perfection with a signature crimson glaze.",
+    "translation_alternatives": ["Chinese BBQ Pork", "Cantonese Roast Pork", "Red Barbecue Pork"],
+    "created_at": "2024-12-01T00:00:00Z"
+  }
+]

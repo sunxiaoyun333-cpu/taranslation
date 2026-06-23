@@ -1,0 +1,19 @@
+{
+  "ingredients": [
+    {"en": "chicken", "cn": "鸡肉", "category": "meat"},
+    {"en": "pork", "cn": "猪肉", "category": "meat"},
+    {"en": "beef", "cn": "牛肉", "category": "meat"},
+    {"en": "tofu", "cn": "豆腐", "category": "soy_products"},
+    {"en": "soy sauce", "cn": "酱油", "category": "condiment"},
+    {"en": "oyster sauce", "cn": "蚝油", "category": "condiment"},
+    {"en": "sesame oil", "cn": "芝麻油", "category": "oil"},
+    {"en": "peanuts", "cn": "花生", "category": "nuts"},
+    {"en": "cashews", "cn": "腰果", "category": "nuts"},
+    {"en": "shrimp", "cn": "虾", "category": "seafood"},
+    {"en": "scallions", "cn": "葱", "category": "vegetable"},
+    {"en": "ginger", "cn": "姜", "category": "spice"},
+    {"en": "garlic", "cn": "蒜", "category": "spice"},
+    {"en": "rice vinegar", "cn": "米醋", "category": "condiment"},
+    {"en": "cornstarch", "cn": "淀粉", "category": "thickener"}
+  ]
+}

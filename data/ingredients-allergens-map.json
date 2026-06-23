@@ -1,0 +1,172 @@
+{
+  "ingredients": [
+    {
+      "name_en": "soy sauce",
+      "name_cn": "酱油",
+      "allergens": ["soybeans", "wheat"],
+      "notes": "Most soy sauce contains wheat. Tamari is gluten-free alternative.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "oyster sauce",
+      "name_cn": "蚝油",
+      "allergens": ["shellfish", "soybeans"],
+      "notes": "Contains oyster extract and often soy sauce base.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "hoisin sauce",
+      "name_cn": "海鲜酱",
+      "allergens": ["soybeans", "wheat"],
+      "notes": "Despite name, typically doesn't contain seafood but has soy and wheat.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "sesame oil",
+      "name_cn": "芝麻油",
+      "allergens": ["sesame"],
+      "notes": "Pure sesame oil.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "fish sauce",
+      "name_cn": "鱼露",
+      "allergens": ["fish"],
+      "notes": "Made from fermented fish.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "doubanjiang",
+      "name_cn": "豆瓣酱",
+      "allergens": ["soybeans"],
+      "notes": "Fermented broad bean paste, contains soy.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "tofu",
+      "name_cn": "豆腐",
+      "allergens": ["soybeans"],
+      "notes": "Soy-based tofu product.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "ground pork",
+      "name_cn": "猪肉末",
+      "allergens": [],
+      "notes": "Fresh ground pork with no major FDA allergens.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "sichuan peppercorn",
+      "name_cn": "花椒",
+      "allergens": [],
+      "notes": "Spice ingredient with no major FDA allergens.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "scallion",
+      "name_cn": "葱",
+      "allergens": [],
+      "notes": "Fresh scallion with no major FDA allergens.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "chili oil",
+      "name_cn": "辣椒油",
+      "allergens": [],
+      "notes": "Plain chili oil has no major FDA allergens unless blended.",
+      "confidence": "medium"
+    },
+    {
+      "name_en": "chicken breast",
+      "name_cn": "鸡胸肉",
+      "allergens": [],
+      "notes": "Fresh chicken breast with no major FDA allergens.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "peanuts",
+      "name_cn": "花生",
+      "allergens": ["peanuts"],
+      "notes": "Peanut allergen.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "dried chili",
+      "name_cn": "干辣椒",
+      "allergens": [],
+      "notes": "Dried chili with no major FDA allergens.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "vinegar",
+      "name_cn": "醋",
+      "allergens": [],
+      "notes": "Plain vinegar has no major FDA allergens.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "sugar",
+      "name_cn": "糖",
+      "allergens": [],
+      "notes": "Sugar has no major FDA allergens.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "garlic",
+      "name_cn": "大蒜",
+      "allergens": [],
+      "notes": "Garlic has no major FDA allergens.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "ginger",
+      "name_cn": "姜",
+      "allergens": [],
+      "notes": "Ginger has no major FDA allergens.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "peanut oil",
+      "name_cn": "花生油",
+      "allergens": ["peanuts"],
+      "notes": "Highly refined peanut oil may not trigger allergies, but must be declared.",
+      "confidence": "medium"
+    },
+    {
+      "name_en": "wonton wrapper",
+      "name_cn": "馄饨皮",
+      "allergens": ["wheat", "eggs"],
+      "notes": "Made with wheat flour and usually eggs.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "egg noodles",
+      "name_cn": "蛋面",
+      "allergens": ["wheat", "eggs"],
+      "notes": "Contains both wheat and eggs.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "rice noodles",
+      "name_cn": "米粉",
+      "allergens": [],
+      "notes": "Gluten-free, made from rice.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "cashews",
+      "name_cn": "腰果",
+      "allergens": ["tree_nuts"],
+      "notes": "Tree nut allergen.",
+      "confidence": "high"
+    },
+    {
+      "name_en": "shrimp paste",
+      "name_cn": "虾酱",
+      "allergens": ["shellfish"],
+      "notes": "Made from fermented shrimp.",
+      "confidence": "high"
+    }
+  ]
+}
