@@ -77,6 +77,7 @@ async function buildResultFromStandardDish(
     marketingHooksCn,
     instagramCaptionCn,
     doordashCaptionCn,
+    uniqueSellingPointsCn,
   ] = await Promise.all([
     translateDescriptionToChinese(dish.description_short, dish.name_en_standard, dish.name_cn),
     translateDescriptionToChinese(dish.description_marketing, dish.name_en_standard, dish.name_cn),
@@ -85,6 +86,11 @@ async function buildResultFromStandardDish(
     translateListToChinese(marketingHooksEn, dish.name_en_standard, dish.name_cn),
     translateDescriptionToChinese(instagramCaptionEn, dish.name_en_standard, dish.name_cn),
     translateDescriptionToChinese(doordashCaptionEn, dish.name_en_standard, dish.name_cn),
+    translateListToChinese([
+      `Authentic ${dish.cuisine} recipe`,
+      `Made fresh daily`,
+      `Chef's signature dish`,
+    ], dish.name_en_standard, dish.name_cn),
   ])
 
   const matchType = engineResult.type === 'exact_match' ? 'exact' as const : 'semantic' as const
@@ -161,6 +167,7 @@ async function buildResultFromStandardDish(
         `Made fresh daily`,
         `Chef's signature dish`,
       ],
+      unique_selling_points_cn: uniqueSellingPointsCn,
     },
     allergen_check: allergenResult,
     search_info: {
@@ -194,6 +201,7 @@ async function buildResultFromGemini(
     marketingHooksCn,
     instagramCaptionCn,
     doordashCaptionCn,
+    uniqueSellingPointsCn,
   ] = await Promise.all([
     translateDescriptionToChinese(llmResult.description_short, llmResult.name_en, resolvedDishNameCn),
     translateDescriptionToChinese(llmResult.description_marketing, llmResult.name_en, resolvedDishNameCn),
@@ -202,6 +210,7 @@ async function buildResultFromGemini(
     translateListToChinese(llmResult.marketing_hooks?.en || [], llmResult.name_en, resolvedDishNameCn),
     translateDescriptionToChinese(llmResult.social_media_captions?.instagram_en || '', llmResult.name_en, resolvedDishNameCn),
     translateDescriptionToChinese(llmResult.social_media_captions?.doordash_en || '', llmResult.name_en, resolvedDishNameCn),
+    translateListToChinese(llmResult.unique_selling_points || [], llmResult.name_en, resolvedDishNameCn),
   ])
 
   return {
@@ -271,6 +280,7 @@ async function buildResultFromGemini(
         doordash_cn: doordashCaptionCn,
       },
       unique_selling_points: llmResult.unique_selling_points || [],
+      unique_selling_points_cn: uniqueSellingPointsCn,
     },
     allergen_check: allergenResult,
     search_info: {

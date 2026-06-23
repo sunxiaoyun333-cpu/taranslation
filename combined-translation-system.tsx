@@ -79,7 +79,7 @@ export function TranslationResultDual({ result, locale }: Props) {
   const notes     = buildPairs(compliance?.notes_cn, compliance?.notes, '如有饮食禁忌，请提前告知服务员。', 'No additional note')
   const pairings  = buildPairs(marketing?.pairing_suggestions_cn, marketing?.pairing_suggestions, `推荐搭配米饭或清爽饮品，与${dishNameZh}相得益彰。`, 'Pairs well with rice or a refreshing drink.')
   const tags      = buildPairs(marketing?.tags_cn, marketing?.tags, categoryZh, categoryEn)
-  const usps      = buildSellingPoints(dishNameZh, dishNameEn, cuisineZh, cuisineEn, categoryZh, categoryEn, spiceZh, spiceEn, marketing?.unique_selling_points)
+  const usps      = buildSellingPoints(dishNameZh, dishNameEn, cuisineZh, cuisineEn, categoryZh, categoryEn, spiceZh, spiceEn, marketing?.unique_selling_points_cn, marketing?.unique_selling_points)
 
   const ingredients = buildIngredientPairs(
     dish.ingredients_cn,
@@ -790,11 +790,17 @@ function buildSellingPoints(
   cuisineZh: string, cuisineEn: string,
   categoryZh: string, categoryEn: string,
   spiceZh: string, spiceEn: string,
+  sourceZh?: string[],
   source?: string[],
 ): TextPair[] {
+  const zh = normalizeList(sourceZh)
   const en = normalizeList(source)
   if (en.length > 0) {
-    return en.map((enText) => {
+    return en.map((enText, index) => {
+      const normalizedZh = normalizeChineseDisplayText(zh[index], '')
+      if (normalizedZh) {
+        return { zh: normalizedZh, en: enText }
+      }
       // 先尝试结构化翻译
       const translated = translateEnglishTerms(enText)
       if (translated && hasChinese(translated)) {

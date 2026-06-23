@@ -99,6 +99,7 @@ export interface MarketingInfo {
     doordash_en: string
   }
   unique_selling_points?: string[]
+  unique_selling_points_cn?: string[]
 }
 
 export interface SearchInfo {
@@ -262,6 +263,7 @@ export interface LLMTranslationOutput {
     doordash_en: string
   }
   unique_selling_points?: string[]
+  unique_selling_points_cn?: string[]
   pairing_suggestions: string[]
   pairing_suggestions_cn: string[]
   tags: string[]

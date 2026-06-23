@@ -125,6 +125,7 @@ export function TranslationResultDual({ result, locale }: Props) {
     categoryEn,
     spiceZh,
     spiceEn,
+    sourceZh: marketing?.unique_selling_points_cn,
     source: marketing?.unique_selling_points,
   })
   const captions: DetailPair[] = [
@@ -530,6 +531,7 @@ function buildSellingPoints({
   categoryEn,
   spiceZh,
   spiceEn,
+  sourceZh,
   source,
 }: {
   dishNameZh: string
@@ -540,13 +542,15 @@ function buildSellingPoints({
   categoryEn: string
   spiceZh: string
   spiceEn: string
+  sourceZh?: string[]
   source?: string[]
 }): TextPair[] {
   const en = normalizeList(source)
+  const zh = normalizeList(sourceZh)
 
   if (en.length > 0) {
-    return en.map((item) => ({
-      zh: buildSellingPointZh(item, dishNameZh, cuisineZh, categoryZh, spiceZh),
+    return en.map((item, index) => ({
+      zh: normalizeChineseDisplayText(zh[index], '') || buildSellingPointZh(item, dishNameZh, cuisineZh, categoryZh, spiceZh),
       en: item,
     }))
   }
