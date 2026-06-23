@@ -184,11 +184,30 @@ async function buildResultFromGemini(
   const allergenResult = detectAllergens(llmResult.ingredients)
 
   const similarDishes = engineResult?.similar_dishes?.map(s => s.dish.name_en_standard) || []
+  const resolvedDishNameCn = llmResult.name_cn || dishName
+
+  const [
+    descriptionShortCn,
+    descriptionMarketingCn,
+    marketingHeadlineCn,
+    marketingDescriptionCn,
+    marketingHooksCn,
+    instagramCaptionCn,
+    doordashCaptionCn,
+  ] = await Promise.all([
+    translateDescriptionToChinese(llmResult.description_short, llmResult.name_en, resolvedDishNameCn),
+    translateDescriptionToChinese(llmResult.description_marketing, llmResult.name_en, resolvedDishNameCn),
+    translateDescriptionToChinese(llmResult.marketing_headline_en, llmResult.name_en, resolvedDishNameCn),
+    translateDescriptionToChinese(llmResult.marketing_description_en, llmResult.name_en, resolvedDishNameCn),
+    translateListToChinese(llmResult.marketing_hooks?.en || [], llmResult.name_en, resolvedDishNameCn),
+    translateDescriptionToChinese(llmResult.social_media_captions?.instagram_en || '', llmResult.name_en, resolvedDishNameCn),
+    translateDescriptionToChinese(llmResult.social_media_captions?.doordash_en || '', llmResult.name_en, resolvedDishNameCn),
+  ])
 
   return {
     dish: {
       id: generateId(),
-      name_cn: llmResult.name_cn || dishName,
+      name_cn: resolvedDishNameCn,
       name_en: llmResult.name_en,
       category: llmResult.category,
       category_cn: llmResult.category_cn || getCategoryCn(llmResult.category),
@@ -204,9 +223,9 @@ async function buildResultFromGemini(
       detected_allergens: allergenResult,
       spice_level: llmResult.spice_level,
       description_short: llmResult.description_short,
-      description_short_cn: await translateDescriptionToChinese(llmResult.description_short, llmResult.name_en, llmResult.name_cn || dishName),
+      description_short_cn: descriptionShortCn,
       description_marketing: llmResult.description_marketing,
-      description_marketing_cn: await translateDescriptionToChinese(llmResult.description_marketing, llmResult.name_en, llmResult.name_cn || dishName),
+      description_marketing_cn: descriptionMarketingCn,
       translation_alternatives: llmResult.translation_alternatives,
       created_at: new Date().toISOString(),
     },
@@ -234,16 +253,23 @@ async function buildResultFromGemini(
     },
     marketing: {
       headline_en: llmResult.marketing_headline_en,
-      headline_cn: llmResult.marketing_headline_cn
-        || await translateDescriptionToChinese(llmResult.marketing_headline_en, llmResult.name_en, llmResult.name_cn || dishName),
+      headline_cn: marketingHeadlineCn,
       description_en: llmResult.marketing_description_en,
-      description_cn: await translateDescriptionToChinese(llmResult.marketing_description_en, llmResult.name_en, llmResult.name_cn || dishName),
+      description_cn: marketingDescriptionCn,
       pairing_suggestions: llmResult.pairing_suggestions || [],
       pairing_suggestions_cn: buildChineseTextList(llmResult.pairing_suggestions_cn, llmResult.pairing_suggestions || [], '推荐搭配米饭或清爽饮品。'),
       tags: llmResult.tags || [],
       tags_cn: buildChineseTextList(llmResult.tags_cn, llmResult.tags || [], '招牌推荐'),
-      marketing_hooks: llmResult.marketing_hooks || { cn: [], en: [] },
-      social_media_captions: normalizeChineseCaptions(llmResult.social_media_captions),
+      marketing_hooks: {
+        en: llmResult.marketing_hooks?.en || [],
+        cn: marketingHooksCn,
+      },
+      social_media_captions: {
+        instagram_en: llmResult.social_media_captions?.instagram_en || '',
+        instagram_cn: instagramCaptionCn,
+        doordash_en: llmResult.social_media_captions?.doordash_en || '',
+        doordash_cn: doordashCaptionCn,
+      },
       unique_selling_points: llmResult.unique_selling_points || [],
     },
     allergen_check: allergenResult,

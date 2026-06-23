@@ -324,54 +324,146 @@ export async function translateDescriptionToChinese(englishText: string, dishNam
   const model = getGeminiClient().getGenerativeModel({
     model: 'gemini-2.5-flash',
     generationConfig: {
-      temperature: 0.1,
-      maxOutputTokens: 512,
+      temperature: 0.05,
+      maxOutputTokens: 768,
     },
   })
 
-  const prompt = `Translate the following English menu copy into complete, natural Chinese.
-This is a FAITHFUL TRANSLATION task, not a rewriting or summarizing task.
+  let lastCandidate = ''
+  let retryHint = ''
 
-Rules:
-- Preserve all concrete meaning from the English.
-- Do NOT shorten, summarize, simplify, or compress the sentence.
-- Do NOT replace the original with a headline, slogan, or abstract summary.
-- Preserve key food details such as ingredients, texture, sauce, spice, aroma, and sensory effects.
-- If the English is one sentence, return one complete Chinese sentence.
-- The Chinese should read naturally, but it must stay semantically aligned with the English.
-- Return only the Chinese translation.
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const result = await model.generateContent(
+      buildStrictChineseTranslationPrompt(englishText, dishName, dishNameCn, retryHint)
+    )
 
-Dish: ${dishNameCn} (${dishName})
+    const candidate = normalizeChineseTranslation(result.response.text())
+    lastCandidate = candidate
 
-English: "${englishText}"
+    const localIssues = getChineseTranslationIssues(candidate, englishText)
+    if (localIssues.length > 0) {
+      retryHint = `Previous attempt failed these checks: ${localIssues.join('; ')}`
+      continue
+    }
 
-Return ONLY the Chinese translation. No quotes, no prefix, no explanation.`
+    const review = await reviewChineseTranslation(model, englishText, candidate, dishName, dishNameCn)
+    if (review.pass) {
+      return candidate
+    }
 
-  const result = await model.generateContent(prompt)
-  const firstPass = normalizeChineseTranslation(result.response.text())
-
-  if (!needsRetryForIncompleteTranslation(firstPass, englishText)) {
-    return firstPass
+    retryHint = `Previous attempt failed review: ${review.issues.join('; ')}`
   }
 
-  const retryPrompt = `Translate the English below into FULL Chinese with no omissions.
-Important: your previous attempt was too short. This time you must translate every important detail.
+  return lastCandidate
+}
 
-Strict requirements:
-- Keep the full meaning.
+function buildStrictChineseTranslationPrompt(
+  englishText: string,
+  dishName: string,
+  dishNameCn: string,
+  retryHint: string,
+): string {
+  return `Translate the English menu copy below into Chinese.
+
+English is the ONLY source of truth.
+Your Chinese must be a complete, faithful translation of the English.
+
+Hard rules:
 - Do not summarize.
-- Do not turn it into a short slogan.
-- Keep the sentence complete.
-- Preserve details like tofu, sauce, chili bean paste, peppercorn numbness, aroma, texture, and flavor when present.
+- Do not shorten.
+- Do not rewrite into a slogan.
+- Do not add new meaning.
+- Do not remove any concrete detail.
+- Preserve ingredients, texture, aroma, spice, sauce, numbness, and tone.
+- If the English has multiple descriptive parts, the Chinese must keep all of them.
+- The output must be Chinese only.
+- Do not leave English words in the answer unless the source itself is a brand name.
+- Return one complete natural Chinese translation only.
 
 Dish: ${dishNameCn} (${dishName})
-
 English: "${englishText}"
+${retryHint ? `Important correction note: ${retryHint}` : ''}
 
-Return ONLY the complete Chinese translation.`
+Return ONLY the final Chinese translation.`
+}
 
-  const retryResult = await model.generateContent(retryPrompt)
-  return normalizeChineseTranslation(retryResult.response.text())
+function getChineseTranslationIssues(chineseText: string, englishText: string): string[] {
+  const issues: string[] = []
+  const chineseCharCount = (chineseText.match(/[\u3400-\u9fff]/g) || []).length
+  const englishWordCount = (englishText.match(/[A-Za-z]+/g) || []).length
+  const latinTokenCount = (chineseText.match(/[A-Za-z]{2,}/g) || []).length
+  const englishCommaCount = (englishText.match(/[,;:]/g) || []).length
+  const chinesePauseCount = (chineseText.match(/[，；：]/g) || []).length
+
+  if (!chineseText) {
+    issues.push('empty translation')
+    return issues
+  }
+
+  if (chineseCharCount < 6) {
+    issues.push('too few Chinese characters')
+  }
+
+  if (latinTokenCount > 0) {
+    issues.push('contains English words')
+  }
+
+  if (englishWordCount >= 8 && chineseCharCount < Math.max(12, Math.floor(englishWordCount * 1.4))) {
+    issues.push('translation is too short for the English source')
+  }
+
+  if (englishCommaCount >= 2 && chinesePauseCount === 0) {
+    issues.push('missing multi-part structure from the English source')
+  }
+
+  return issues
+}
+
+async function reviewChineseTranslation(
+  model: ReturnType<ReturnType<typeof getGeminiClient>['getGenerativeModel']>,
+  englishText: string,
+  chineseText: string,
+  dishName: string,
+  dishNameCn: string,
+): Promise<{ pass: boolean; issues: string[] }> {
+  const prompt = `You are reviewing whether a Chinese translation is fully aligned with its English source.
+
+English is the only source of truth.
+Check whether the Chinese:
+1. preserves all key meaning,
+2. does not omit important details,
+3. does not summarize or compress too much,
+4. does not leave English words untranslated,
+5. stays natural Chinese.
+
+Dish: ${dishNameCn} (${dishName})
+English: "${englishText}"
+Chinese: "${chineseText}"
+
+Return JSON only:
+{
+  "pass": true or false,
+  "issues": ["short issue description 1", "short issue description 2"]
+}`
+
+  const result = await model.generateContent(prompt)
+  const text = result.response.text()
+    .replace(/```json\s*/g, '')
+    .replace(/```\s*/g, '')
+    .trim()
+
+  try {
+    const parsed = JSON.parse(text) as { pass?: boolean; issues?: string[] }
+    return {
+      pass: Boolean(parsed.pass),
+      issues: Array.isArray(parsed.issues) ? parsed.issues.filter(Boolean) : [],
+    }
+  } catch {
+    return {
+      pass: false,
+      issues: ['review parse failed'],
+    }
+  }
 }
 
 function normalizeChineseTranslation(text: string): string {
