@@ -241,16 +241,12 @@ export async function translateDish(input: LLMTranslationInput): Promise<LLMTran
   const text = response.text()
 
   try {
-    const parsed = JSON.parse(text) as LLMTranslationOutput
-    return parsed
+    return parseJsonResponse<LLMTranslationOutput>(text)
   } catch (parseError) {
     console.error('JSON parse error, raw response:', text.substring(0, 500))
-    const cleaned = text
-      .replace(/```json\s*/g, '')
-      .replace(/```\s*/g, '')
-      .trim()
     try {
-      return JSON.parse(cleaned) as LLMTranslationOutput
+      const repaired = await repairJsonWithGemini(text, 'dish translation JSON')
+      return parseJsonResponse<LLMTranslationOutput>(repaired)
     } catch {
       throw new Error(`Failed to parse Gemini response as JSON. Raw: ${text.substring(0, 300)}`)
     }
@@ -308,14 +304,92 @@ Return JSON only:
   const text = result.response.text()
 
   try {
-    return JSON.parse(text) as { headline: string; body: string }
+    return parseJsonResponse<{ headline: string; body: string }>(text)
   } catch {
-    const cleaned = text
-      .replace(/```json\s*/g, '')
-      .replace(/```\s*/g, '')
-      .trim()
-    return JSON.parse(cleaned) as { headline: string; body: string }
+    const repaired = await repairJsonWithGemini(text, 'marketing copy JSON')
+    return parseJsonResponse<{ headline: string; body: string }>(repaired)
   }
+}
+
+function parseJsonResponse<T>(rawText: string): T {
+  const cleaned = rawText
+    .replace(/```json\s*/g, '')
+    .replace(/```\s*/g, '')
+    .trim()
+
+  try {
+    return JSON.parse(cleaned) as T
+  } catch {
+    const extracted = extractFirstJsonObject(cleaned)
+    if (extracted) {
+      return JSON.parse(extracted) as T
+    }
+    throw new Error('Unable to parse JSON response')
+  }
+}
+
+function extractFirstJsonObject(text: string): string | null {
+  const start = text.indexOf('{')
+  if (start === -1) return null
+
+  let depth = 0
+  let inString = false
+  let escaped = false
+
+  for (let i = start; i < text.length; i += 1) {
+    const char = text[i]
+
+    if (inString) {
+      if (escaped) {
+        escaped = false
+      } else if (char === '\\') {
+        escaped = true
+      } else if (char === '"') {
+        inString = false
+      }
+      continue
+    }
+
+    if (char === '"') {
+      inString = true
+      continue
+    }
+
+    if (char === '{') depth += 1
+    if (char === '}') depth -= 1
+
+    if (depth === 0) {
+      return text.slice(start, i + 1)
+    }
+  }
+
+  return null
+}
+
+async function repairJsonWithGemini(rawText: string, label: string): Promise<string> {
+  const model = getGeminiClient().getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    generationConfig: {
+      temperature: 0,
+      maxOutputTokens: 4096,
+      responseMimeType: 'application/json',
+    },
+  })
+
+  const prompt = `Repair the malformed JSON below.
+
+Requirements:
+- Return valid JSON only.
+- Preserve the original field values and structure as much as possible.
+- Do not add explanations.
+- Do not wrap in markdown.
+
+Input type: ${label}
+Malformed JSON:
+${rawText}`
+
+  const result = await model.generateContent(prompt)
+  return result.response.text().trim()
 }
 
 export async function translateDescriptionToChinese(englishText: string, dishName: string, dishNameCn: string): Promise<string> {
