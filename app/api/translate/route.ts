@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { translationEngine } from '@/lib/translation-engine'
-import { translateDish, translateDescriptionToChinese } from '@/lib/gemini'
+import {
+  translateDish,
+  translateDescriptionToChinese,
+  generateStandardDishMarketing,
+} from '@/lib/gemini'
 import { detectAllergens } from '@/lib/allergens'
 import { generateId } from '@/lib/utils'
-import type { TranslationResult, APIResponse, StandardDish, EngineTranslationResult } from '@/lib/types'
+import type {
+  APIResponse,
+  EngineTranslationResult,
+  StandardDish,
+  TranslationResult,
+} from '@/lib/types'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const dishName = (body.dishName || body.query || '').trim()
-    const lang: 'zh' | 'en' = body.lang || 'zh'
 
     if (!dishName) {
       return NextResponse.json(
@@ -18,19 +26,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Step 1: RAG 检索
     const engineResult = await translationEngine.translate(dishName)
-    console.log(`[RAG] type=${engineResult.type} source=${engineResult.source} confidence=${engineResult.confidence}`)
+    console.log(
+      `[RAG] type=${engineResult.type} source=${engineResult.source} confidence=${engineResult.confidence}`
+    )
 
-    let translationResult: TranslationResult
-
-    if (engineResult.dish && engineResult.type !== 'generated') {
-      // RAG 命中，使用标准数据库数据
-      translationResult = await buildResultFromStandardDish(engineResult, dishName, lang)
-    } else {
-      // RAG 未命中，走 Gemini 生成
-      translationResult = await buildResultFromGemini(dishName, lang, engineResult)
-    }
+    const translationResult =
+      engineResult.dish && engineResult.type !== 'generated'
+        ? await buildResultFromStandardDish(engineResult, dishName)
+        : await buildResultFromGemini(dishName, engineResult)
 
     const result: APIResponse<TranslationResult> = {
       success: true,
@@ -39,7 +43,6 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(result)
-
   } catch (error) {
     console.error('Translation Error:', error)
     const message = error instanceof Error ? error.message : 'Unknown error'
@@ -52,27 +55,18 @@ export async function POST(request: NextRequest) {
 
 async function buildResultFromStandardDish(
   engineResult: EngineTranslationResult,
-  dishName: string,
-  lang: string,
+  dishName: string
 ): Promise<TranslationResult> {
   const dish = engineResult.dish!
-
   const ingredients = dish.ingredients_standard
   const allergenResult = detectAllergens(ingredients)
-  const headlineEn = `The ${dish.name_en_standard} You've Been Dreaming About`
-  const pairingSuggestionsEn = buildStandardPairingsEn(dish)
-  const marketingHooksEn = [
-    `The dish that made ${dish.cuisine} famous`,
-    `Our most ordered ${dish.category.toLowerCase()}`,
-    `One bite and you'll understand why`,
-  ]
-  const instagramCaptionEn = `🔥 ${dish.name_en_standard} — ${dish.description_short} #ChineseFood #${dish.cuisine} #FoodPorn`
-  const doordashCaptionEn = `⚡ Best Seller: ${dish.name_en_standard} — ${dish.description_short.substring(0, 40)}...`
+  const englishMarketing = await buildDynamicMarketingForStandardDish(dish)
 
   const [
     descriptionShortCn,
     descriptionMarketingCn,
     headlineCn,
+    marketingDescriptionCn,
     pairingSuggestionsCn,
     marketingHooksCn,
     instagramCaptionCn,
@@ -81,19 +75,16 @@ async function buildResultFromStandardDish(
   ] = await Promise.all([
     translateDescriptionToChinese(dish.description_short, dish.name_en_standard, dish.name_cn),
     translateDescriptionToChinese(dish.description_marketing, dish.name_en_standard, dish.name_cn),
-    translateDescriptionToChinese(headlineEn, dish.name_en_standard, dish.name_cn),
-    translateListToChinese(pairingSuggestionsEn, dish.name_en_standard, dish.name_cn),
-    translateListToChinese(marketingHooksEn, dish.name_en_standard, dish.name_cn),
-    translateDescriptionToChinese(instagramCaptionEn, dish.name_en_standard, dish.name_cn),
-    translateDescriptionToChinese(doordashCaptionEn, dish.name_en_standard, dish.name_cn),
-    translateListToChinese([
-      `Authentic ${dish.cuisine} recipe`,
-      `Made fresh daily`,
-      `Chef's signature dish`,
-    ], dish.name_en_standard, dish.name_cn),
+    translateDescriptionToChinese(englishMarketing.headline_en, dish.name_en_standard, dish.name_cn),
+    translateDescriptionToChinese(englishMarketing.description_en, dish.name_en_standard, dish.name_cn),
+    translateListToChinese(englishMarketing.pairing_suggestions, dish.name_en_standard, dish.name_cn),
+    translateListToChinese(englishMarketing.marketing_hooks, dish.name_en_standard, dish.name_cn),
+    translateDescriptionToChinese(englishMarketing.instagram_caption, dish.name_en_standard, dish.name_cn),
+    translateDescriptionToChinese(englishMarketing.doordash_caption, dish.name_en_standard, dish.name_cn),
+    translateListToChinese(englishMarketing.unique_selling_points, dish.name_en_standard, dish.name_cn),
   ])
 
-  const matchType = engineResult.type === 'exact_match' ? 'exact' as const : 'semantic' as const
+  const matchType = engineResult.type === 'exact_match' ? 'exact' : 'semantic'
 
   return {
     dish: {
@@ -109,7 +100,16 @@ async function buildResultFromStandardDish(
       ingredients_standard: dish.ingredients_standard,
       allergens: allergenResult.allergens.map((a) => ({
         name: a.name,
-        type: a.category as 'dairy' | 'eggs' | 'fish' | 'shellfish' | 'tree_nuts' | 'peanuts' | 'wheat' | 'soy' | 'sesame',
+        type: a.category as
+          | 'dairy'
+          | 'eggs'
+          | 'fish'
+          | 'shellfish'
+          | 'tree_nuts'
+          | 'peanuts'
+          | 'wheat'
+          | 'soy'
+          | 'sesame',
         severity: a.severity,
         source: a.sources_found.join(', '),
         confidence: a.confidence,
@@ -132,41 +132,39 @@ async function buildResultFromStandardDish(
         allergenResult.allergens.length > 0
           ? `Contains: ${allergenResult.allergens.map((a) => a.name).join(', ')}`
           : '',
-        ...allergenResult.missing_checks.map((i) => `⚠️ "${i}" requires manual verification`),
+        ...allergenResult.missing_checks.map((item) => `⚠️ "${item}" requires manual verification`),
       ].filter(Boolean),
       warnings_cn: [
         allergenResult.allergens.length > 0
           ? `包含：${allergenResult.allergens.map((a) => a.name_cn).join('、')}`
           : '',
-        ...allergenResult.missing_checks.map((i) => `⚠️“${getIngredientCn(i)}”需要人工确认`),
+        ...allergenResult.missing_checks.map(
+          (item) => `⚠️ “${getIngredientCn(item)}” 需要人工确认`
+        ),
       ].filter(Boolean),
-      notes: dish.allergens_standard.map(a => `Contains: ${a}`),
-      notes_cn: dish.allergens_standard.map(a => `包含：${getAllergenCn(a)}`),
+      notes: dish.allergens_standard.map((item) => `Contains: ${item}`),
+      notes_cn: dish.allergens_standard.map((item) => `包含：${getAllergenCn(item)}`),
     },
     marketing: {
-      headline_en: headlineEn,
+      headline_en: englishMarketing.headline_en,
       headline_cn: headlineCn,
-      description_en: dish.description_marketing,
-      description_cn: descriptionMarketingCn,
-      pairing_suggestions: pairingSuggestionsEn,
+      description_en: englishMarketing.description_en,
+      description_cn: marketingDescriptionCn,
+      pairing_suggestions: englishMarketing.pairing_suggestions,
       pairing_suggestions_cn: pairingSuggestionsCn,
-      tags: [dish.category, dish.cuisine, ...(dish.spice_level > 0 ? [`Spice Level ${dish.spice_level}`] : [])],
-      tags_cn: [getCategoryCn(dish.category), getCuisineCn(dish.cuisine), ...(dish.spice_level > 0 ? [`辣度${dish.spice_level}`] : [])],
+      tags: englishMarketing.tags,
+      tags_cn: buildChineseTextList(undefined, englishMarketing.tags, '招牌推荐'),
       marketing_hooks: {
         cn: marketingHooksCn,
-        en: marketingHooksEn,
+        en: englishMarketing.marketing_hooks,
       },
       social_media_captions: {
         instagram_cn: instagramCaptionCn,
-        instagram_en: instagramCaptionEn,
+        instagram_en: englishMarketing.instagram_caption,
         doordash_cn: doordashCaptionCn,
-        doordash_en: doordashCaptionEn,
+        doordash_en: englishMarketing.doordash_caption,
       },
-      unique_selling_points: [
-        `Authentic ${dish.cuisine} recipe`,
-        `Made fresh daily`,
-        `Chef's signature dish`,
-      ],
+      unique_selling_points: englishMarketing.unique_selling_points,
       unique_selling_points_cn: uniqueSellingPointsCn,
     },
     allergen_check: allergenResult,
@@ -174,7 +172,7 @@ async function buildResultFromStandardDish(
       query_used: dishName,
       match_type: matchType,
       match_score: engineResult.confidence,
-      similar_dishes: (engineResult.similar_dishes || []).map(s => s.dish.name_en_standard),
+      similar_dishes: (engineResult.similar_dishes || []).map((s) => s.dish.name_en_standard),
     },
     confidence: engineResult.confidence,
     source: engineResult.source,
@@ -183,14 +181,11 @@ async function buildResultFromStandardDish(
 
 async function buildResultFromGemini(
   dishName: string,
-  lang: string,
-  engineResult?: EngineTranslationResult,
+  engineResult?: EngineTranslationResult
 ): Promise<TranslationResult> {
   const llmResult = await translateDish({ query: dishName })
-
   const allergenResult = detectAllergens(llmResult.ingredients)
-
-  const similarDishes = engineResult?.similar_dishes?.map(s => s.dish.name_en_standard) || []
+  const similarDishes = engineResult?.similar_dishes?.map((s) => s.dish.name_en_standard) || []
   const resolvedDishNameCn = llmResult.name_cn || dishName
 
   const [
@@ -204,12 +199,32 @@ async function buildResultFromGemini(
     uniqueSellingPointsCn,
   ] = await Promise.all([
     translateDescriptionToChinese(llmResult.description_short, llmResult.name_en, resolvedDishNameCn),
-    translateDescriptionToChinese(llmResult.description_marketing, llmResult.name_en, resolvedDishNameCn),
-    translateDescriptionToChinese(llmResult.marketing_headline_en, llmResult.name_en, resolvedDishNameCn),
-    translateDescriptionToChinese(llmResult.marketing_description_en, llmResult.name_en, resolvedDishNameCn),
+    translateDescriptionToChinese(
+      llmResult.description_marketing,
+      llmResult.name_en,
+      resolvedDishNameCn
+    ),
+    translateDescriptionToChinese(
+      llmResult.marketing_headline_en,
+      llmResult.name_en,
+      resolvedDishNameCn
+    ),
+    translateDescriptionToChinese(
+      llmResult.marketing_description_en,
+      llmResult.name_en,
+      resolvedDishNameCn
+    ),
     translateListToChinese(llmResult.marketing_hooks?.en || [], llmResult.name_en, resolvedDishNameCn),
-    translateDescriptionToChinese(llmResult.social_media_captions?.instagram_en || '', llmResult.name_en, resolvedDishNameCn),
-    translateDescriptionToChinese(llmResult.social_media_captions?.doordash_en || '', llmResult.name_en, resolvedDishNameCn),
+    translateDescriptionToChinese(
+      llmResult.social_media_captions?.instagram_en || '',
+      llmResult.name_en,
+      resolvedDishNameCn
+    ),
+    translateDescriptionToChinese(
+      llmResult.social_media_captions?.doordash_en || '',
+      llmResult.name_en,
+      resolvedDishNameCn
+    ),
     translateListToChinese(llmResult.unique_selling_points || [], llmResult.name_en, resolvedDishNameCn),
   ])
 
@@ -224,7 +239,16 @@ async function buildResultFromGemini(
       ingredients_cn: buildChineseIngredients(llmResult.ingredients_cn, llmResult.ingredients),
       allergens: allergenResult.allergens.map((a) => ({
         name: a.name,
-        type: a.category as 'dairy' | 'eggs' | 'fish' | 'shellfish' | 'tree_nuts' | 'peanuts' | 'wheat' | 'soy' | 'sesame',
+        type: a.category as
+          | 'dairy'
+          | 'eggs'
+          | 'fish'
+          | 'shellfish'
+          | 'tree_nuts'
+          | 'peanuts'
+          | 'wheat'
+          | 'soy'
+          | 'sesame',
         severity: a.severity,
         source: a.sources_found.join(', '),
         confidence: a.confidence,
@@ -245,16 +269,21 @@ async function buildResultFromGemini(
         allergenResult.allergens.length > 0
           ? `Contains: ${allergenResult.allergens.map((a) => a.name).join(', ')}`
           : '',
-        ...allergenResult.missing_checks.map((i) => `⚠️ "${i}" requires manual verification`),
+        ...allergenResult.missing_checks.map((item) => `⚠️ "${item}" requires manual verification`),
       ].filter(Boolean),
       warnings_cn: [
         allergenResult.allergens.length > 0
           ? `包含：${allergenResult.allergens.map((a) => a.name_cn).join('、')}`
           : '',
-        ...allergenResult.missing_checks.map((i) => {
-          const index = llmResult.ingredients.findIndex((ing) => ing.toLowerCase() === i.toLowerCase())
-          const cnName = index !== -1 && llmResult.ingredients_cn ? llmResult.ingredients_cn[index] : getIngredientCn(i)
-          return `⚠️“${normalizeChineseLabel(cnName, getIngredientCn(i))}”需要人工确认`
+        ...allergenResult.missing_checks.map((item) => {
+          const index = llmResult.ingredients.findIndex(
+            (ingredient) => ingredient.toLowerCase() === item.toLowerCase()
+          )
+          const cnName =
+            index !== -1 && llmResult.ingredients_cn
+              ? llmResult.ingredients_cn[index]
+              : getIngredientCn(item)
+          return `⚠️ “${normalizeChineseLabel(cnName, getIngredientCn(item))}” 需要人工确认`
         }),
       ].filter(Boolean),
       notes: llmResult.fda_notes || [],
@@ -266,7 +295,11 @@ async function buildResultFromGemini(
       description_en: llmResult.marketing_description_en,
       description_cn: marketingDescriptionCn,
       pairing_suggestions: llmResult.pairing_suggestions || [],
-      pairing_suggestions_cn: buildChineseTextList(llmResult.pairing_suggestions_cn, llmResult.pairing_suggestions || [], '推荐搭配米饭或清爽饮品。'),
+      pairing_suggestions_cn: buildChineseTextList(
+        llmResult.pairing_suggestions_cn,
+        llmResult.pairing_suggestions || [],
+        '推荐搭配米饭或清爽饮品'
+      ),
       tags: llmResult.tags || [],
       tags_cn: buildChineseTextList(llmResult.tags_cn, llmResult.tags || [], '招牌推荐'),
       marketing_hooks: {
@@ -292,9 +325,70 @@ async function buildResultFromGemini(
   }
 }
 
+async function buildDynamicMarketingForStandardDish(dish: StandardDish) {
+  const fallback = buildStandardMarketingFallback(dish)
+
+  try {
+    const generated = await generateStandardDishMarketing({
+      name_en: dish.name_en_standard,
+      name_cn: dish.name_cn,
+      category: dish.category,
+      cuisine: dish.cuisine,
+      spice_level: dish.spice_level,
+      ingredients: dish.ingredients_standard,
+      description_short: dish.description_short,
+      description_marketing: dish.description_marketing,
+    })
+
+    return {
+      headline_en: generated.headline_en || fallback.headline_en,
+      description_en: generated.description_en || fallback.description_en,
+      pairing_suggestions:
+        generated.pairing_suggestions && generated.pairing_suggestions.length > 0
+          ? generated.pairing_suggestions
+          : fallback.pairing_suggestions,
+      tags: generated.tags && generated.tags.length > 0 ? generated.tags : fallback.tags,
+      marketing_hooks:
+        generated.marketing_hooks && generated.marketing_hooks.length > 0
+          ? generated.marketing_hooks
+          : fallback.marketing_hooks,
+      instagram_caption: generated.instagram_caption || fallback.instagram_caption,
+      doordash_caption: generated.doordash_caption || fallback.doordash_caption,
+      unique_selling_points:
+        generated.unique_selling_points && generated.unique_selling_points.length > 0
+          ? generated.unique_selling_points
+          : fallback.unique_selling_points,
+    }
+  } catch (error) {
+    console.warn('Dynamic marketing generation failed, using fallback:', error)
+    return fallback
+  }
+}
+
+function buildStandardMarketingFallback(dish: StandardDish) {
+  return {
+    headline_en: `Why Guests Crave ${dish.name_en_standard}`,
+    description_en: dish.description_marketing,
+    pairing_suggestions: buildStandardPairingsEn(dish),
+    tags: [dish.category, dish.cuisine, ...(dish.spice_level > 0 ? [`Spice Level ${dish.spice_level}`] : [])],
+    marketing_hooks: [
+      `${getCuisineEnLabel(dish.cuisine)} flavor with real depth and character`,
+      `A signature ${dish.category.toLowerCase()} guests come back for`,
+      `Built for the kind of craving that starts after one bite`,
+    ],
+    instagram_caption: `🔥 ${dish.name_en_standard} brings bold flavor, texture, and serious comfort in every bite. #ChineseFood #${dish.cuisine} #MustOrder`,
+    doordash_caption: `${dish.name_en_standard} Worth Reordering`,
+    unique_selling_points: [
+      `${getCuisineEnLabel(dish.cuisine)} flavor profile`,
+      `Built around ${formatIngredientListEn(dish.ingredients_standard, 3)}`,
+      dish.spice_level > 0 ? `Spice level ${dish.spice_level} with real character` : 'Balanced and crowd-friendly flavor',
+    ],
+  }
+}
+
 function getCategoryCn(category: string): string {
   const map: Record<string, string> = {
-    Appetizer: '开胃菜',
+    Appetizer: '前菜',
     Soup: '汤品',
     'Main Course': '主菜',
     'Noodles/Rice': '面食/米饭',
@@ -302,81 +396,6 @@ function getCategoryCn(category: string): string {
     Beverage: '饮品',
   }
   return map[category] || category
-}
-
-function getCuisineCn(cuisine: string): string {
-  const map: Record<string, string> = {
-    Sichuan: '川菜',
-    Cantonese: '粤菜',
-    Shanghai: '沪菜',
-    Beijing: '京菜',
-    Hunan: '湘菜',
-    Fujian: '闽菜',
-    Fusion: '融合菜',
-    Other: '其他',
-  }
-  return map[cuisine] || cuisine
-}
-
-function buildStandardHeadlineCn(dish: StandardDish): string {
-  return `${dish.name_cn}——经典${getCuisineCn(dish.cuisine)}${getCategoryCn(dish.category)}`
-}
-
-function buildStandardShortDescriptionCn(dish: StandardDish): string {
-  const ingredients = formatIngredientListZh(dish.ingredients_standard, 3)
-  return `${dish.name_cn}以${ingredients}为主要特色，呈现地道${getCuisineCn(dish.cuisine)}风味。`
-}
-
-function buildStandardMarketingDescriptionCn(dish: StandardDish): string {
-  const ingredients = formatIngredientListZh(dish.ingredients_standard, 4)
-  const finishText = dish.spice_level > 0 ? '风味鲜明且层次丰富，适合作为菜单重点推荐。' : '整体口味协调，适合作为菜单重点推荐。'
-  return `${dish.name_cn}选用${ingredients}精心烹制，突出${getCuisineCn(dish.cuisine)}菜的层次与香气，${finishText}`
-}
-
-function buildStandardHooksCn(dish: StandardDish): string[] {
-  const firstIngredient = getIngredientCn(dish.ingredients_standard[0] || '')
-  const secondIngredient = getIngredientCn(dish.ingredients_standard[1] || '')
-  return [
-    `${dish.name_cn}是经典${getCuisineCn(dish.cuisine)}代表菜品。`,
-    `${firstIngredient}与${secondIngredient}搭配得当，风味层次鲜明。`,
-    dish.spice_level > 0 ? `辣度${dish.spice_level}级，适合偏爱重口味的顾客。` : '口味平衡，适合大多数顾客。',
-  ]
-}
-
-function buildStandardPairingsEn(dish: StandardDish): string[] {
-  if (dish.category === 'Noodles/Rice') return ['Pairs well with a light soup or refreshing drink.']
-  return ['Pairs well with rice.', 'Pairs well with a refreshing drink.']
-}
-
-function buildStandardPairingsCn(dish: StandardDish): string[] {
-  if (dish.category === 'Noodles/Rice') return ['适合搭配清爽汤品或饮品。']
-  return ['适合搭配米饭。', '适合搭配清爽饮品。']
-}
-
-function buildStandardInstagramCaptionCn(dish: StandardDish, shortDescription: string): string {
-  return `🔥 ${dish.name_cn}｜${shortDescription} #${getCuisineCn(dish.cuisine)} #中餐 #美食推荐`
-}
-
-function buildStandardDoordashCaptionCn(dish: StandardDish, shortDescription: string): string {
-  const summary = shortDescription.length > 22 ? `${shortDescription.slice(0, 22)}...` : shortDescription
-  return `⚡热卖推荐｜${dish.name_cn}｜${summary}`
-}
-
-function formatIngredientListZh(ingredients: string[], limit: number): string {
-  const translated = ingredients
-    .slice(0, limit)
-    .map(getIngredientCn)
-    .filter(Boolean)
-
-  if (translated.length === 0) return '精选食材'
-  if (translated.length === 1) return translated[0]
-  return translated.join('、')
-}
-
-function normalizeChineseLabel(value: string | undefined, fallback: string): string {
-  const text = String(value || '').trim()
-  if (!text) return fallback
-  return /[\u3400-\u9fff]/.test(text) ? text : fallback
 }
 
 function getIngredientCn(ingredient: string): string {
@@ -387,7 +406,7 @@ function getIngredientCn(ingredient: string): string {
     pork: '猪肉',
     'ground pork': '猪肉末',
     shrimp: '虾',
-    fish: '鱼类',
+    fish: '鱼',
     tofu: '豆腐',
     rice: '米饭',
     noodles: '面条',
@@ -399,7 +418,7 @@ function getIngredientCn(ingredient: string): string {
     'dried chili': '干辣椒',
     vinegar: '醋',
     sugar: '糖',
-    garlic: '大蒜',
+    garlic: '蒜',
     ginger: '姜',
     soy: '大豆',
     soybeans: '大豆',
@@ -412,6 +431,7 @@ function getIngredientCn(ingredient: string): string {
     peanuts: '花生',
     peanut: '花生',
     sesame: '芝麻',
+    eggplant: '茄子',
   }
 
   const raw = String(ingredient || '').trim()
@@ -420,9 +440,7 @@ function getIngredientCn(ingredient: string): string {
 
   const lower = raw.toLowerCase()
   if (map[lower]) return map[lower]
-
   if (lower.endsWith('s') && map[lower.slice(0, -1)]) return map[lower.slice(0, -1)]
-
   return '待确认食材'
 }
 
@@ -450,22 +468,25 @@ function getAllergenCn(allergen: string): string {
 
 function buildChineseIngredients(
   chineseValues: string[] | undefined,
-  englishValues: string[],
+  englishValues: string[]
 ): string[] {
   return englishValues.map((ingredient, index) =>
-    normalizeChineseLabel(chineseValues?.[index], getIngredientCn(ingredient)),
+    normalizeChineseLabel(chineseValues?.[index], getIngredientCn(ingredient))
   )
 }
 
 function buildChineseTextList(
   chineseValues: string[] | undefined,
   englishValues: string[],
-  fallback: string,
+  fallback: string
 ): string[] {
   if (chineseValues && chineseValues.length > 0) {
     const normalized = chineseValues
-      .map((item, index) => normalizeChineseLabel(item, translateCommonEnglishToChinese(englishValues[index]) || fallback))
+      .map((item, index) =>
+        normalizeChineseLabel(item, translateCommonEnglishToChinese(englishValues[index]) || fallback)
+      )
       .filter(Boolean)
+
     if (normalized.length > 0) return normalized
   }
 
@@ -476,41 +497,60 @@ function buildChineseTextList(
 
 function buildChineseNotes(chineseNotes: string[] | undefined, englishNotes: string[]): string[] {
   if (chineseNotes && chineseNotes.length > 0) {
-    return chineseNotes.map((note, index) => normalizeChineseLabel(note, translateCommonEnglishToChinese(englishNotes[index]) || '请咨询门店确认详细说明。'))
+    return chineseNotes.map((note, index) =>
+      normalizeChineseLabel(
+        note,
+        translateCommonEnglishToChinese(englishNotes[index]) || '请咨询门店确认详细说明'
+      )
+    )
   }
 
-  return englishNotes.map((note) => translateCommonEnglishToChinese(note) || '请咨询门店确认详细说明。')
-}
-
-function normalizeChineseCaptions(captions?: {
-  instagram_cn: string
-  instagram_en: string
-  doordash_cn: string
-  doordash_en: string
-}) {
-  if (!captions) {
-    return { instagram_cn: '', instagram_en: '', doordash_cn: '', doordash_en: '' }
-  }
-
-  return {
-    instagram_cn: normalizeChineseLabel(captions.instagram_cn, ''),
-    instagram_en: captions.instagram_en,
-    doordash_cn: normalizeChineseLabel(captions.doordash_cn, ''),
-    doordash_en: captions.doordash_en,
-  }
+  return englishNotes.map(
+    (note) => translateCommonEnglishToChinese(note) || '请咨询门店确认详细说明'
+  )
 }
 
 async function translateListToChinese(
   values: string[],
   dishNameEn: string,
-  dishNameCn: string,
+  dishNameCn: string
 ): Promise<string[]> {
   return Promise.all(
     values.map(async (value) => {
       if (!value.trim()) return ''
       return translateDescriptionToChinese(value, dishNameEn, dishNameCn)
-    }),
+    })
   )
+}
+
+function buildStandardPairingsEn(dish: StandardDish): string[] {
+  if (dish.category === 'Noodles/Rice') {
+    return ['Pairs well with a light soup or refreshing drink.']
+  }
+
+  if (dish.spice_level >= 3) {
+    return ['Pairs well with rice.', 'Balances nicely with a cold drink.']
+  }
+
+  return ['Pairs well with rice.', 'Works well with a light side dish.']
+}
+
+function formatIngredientListEn(ingredients: string[], limit: number): string {
+  const selected = ingredients.slice(0, limit).filter(Boolean)
+  if (selected.length === 0) return 'carefully selected ingredients'
+  if (selected.length === 1) return selected[0]
+  if (selected.length === 2) return `${selected[0]} and ${selected[1]}`
+  return `${selected.slice(0, -1).join(', ')}, and ${selected[selected.length - 1]}`
+}
+
+function normalizeChineseLabel(value: string | undefined, fallback: string): string {
+  const text = String(value || '').trim()
+  if (!text) return fallback
+  return /[\u3400-\u9fff]/.test(text) ? text : fallback
+}
+
+function getCuisineEnLabel(cuisine: string): string {
+  return cuisine || 'Chinese'
 }
 
 function translateCommonEnglishToChinese(text: string | undefined): string | null {
@@ -519,6 +559,7 @@ function translateCommonEnglishToChinese(text: string | undefined): string | nul
   if (/[\u3400-\u9fff]/.test(raw)) return raw
 
   const lower = raw.toLowerCase()
+
   if (lower.startsWith('contains:')) {
     const allergens = raw
       .replace(/contains:/i, '')
@@ -527,17 +568,17 @@ function translateCommonEnglishToChinese(text: string | undefined): string | nul
       .filter(Boolean)
     return allergens.length > 0 ? `包含：${allergens.join('、')}` : '包含：待确认过敏原'
   }
+
   if (lower.includes('manual verification')) return '需要人工确认'
   if (lower.includes('spice level')) {
     const levelMatch = raw.match(/(\d+)/)
     return levelMatch ? `辣度${levelMatch[1]}` : '辣度待确认'
   }
   if (lower.includes('pairs well with rice')) return '适合搭配米饭。'
-  if (lower.includes('pairs well with a refreshing drink')) return '适合搭配清爽饮品。'
-  if (lower.includes('rice')) return '推荐搭配米饭'
-  if (lower.includes('drink') || lower.includes('beverage')) return '推荐搭配清爽饮品'
+  if (lower.includes('refreshing drink') || lower.includes('cold drink')) return '适合搭配清爽饮品。'
+  if (lower.includes('light side dish')) return '适合搭配清淡配菜。'
   if (lower.includes('signature')) return '招牌推荐'
-  if (lower.includes('popular') || lower.includes('best seller')) return '人气推荐'
+  if (lower.includes('best seller') || lower.includes('must-order')) return '人气推荐'
   if (lower.includes('sichuan')) return '川菜'
   if (lower.includes('cantonese')) return '粤菜'
   if (lower.includes('shanghai')) return '沪菜'
@@ -545,8 +586,8 @@ function translateCommonEnglishToChinese(text: string | undefined): string | nul
   if (lower.includes('hunan')) return '湘菜'
   if (lower.includes('fujian')) return '闽菜'
   if (lower.includes('fusion')) return '融合菜'
-  if (lower.includes('appetizer')) return '开胃菜'
   if (lower.includes('main course')) return '主菜'
+  if (lower.includes('appetizer')) return '前菜'
   if (lower.includes('dessert')) return '甜品'
   if (lower.includes('beverage')) return '饮品'
 

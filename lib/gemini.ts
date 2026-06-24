@@ -74,6 +74,28 @@ export interface LLMTranslationOutput {
   fda_notes_cn: string[]
 }
 
+export interface StandardDishMarketingInput {
+  name_en: string
+  name_cn: string
+  category: string
+  cuisine: string
+  spice_level: number
+  ingredients: string[]
+  description_short: string
+  description_marketing: string
+}
+
+export interface StandardDishMarketingOutput {
+  headline_en: string
+  description_en: string
+  marketing_hooks: string[]
+  instagram_caption: string
+  doordash_caption: string
+  unique_selling_points: string[]
+  pairing_suggestions: string[]
+  tags: string[]
+}
+
 const TRANSLATION_PROMPT = `You are a professional Chinese menu translator AND an elite restaurant marketing copywriter for the U.S. market.
 
 CRITICAL: The three fields below must sound like they came from a strong restaurant brand, not from a translator:
@@ -308,6 +330,67 @@ Return JSON only:
   } catch {
     const repaired = await repairJsonWithGemini(text, 'marketing copy JSON')
     return parseJsonResponse<{ headline: string; body: string }>(repaired)
+  }
+}
+
+export async function generateStandardDishMarketing(
+  input: StandardDishMarketingInput
+): Promise<StandardDishMarketingOutput> {
+  const model = getGeminiClient().getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    generationConfig: {
+      temperature: 0.6,
+      maxOutputTokens: 2048,
+      responseMimeType: 'application/json',
+    },
+  })
+
+  const prompt = `You are writing restaurant-grade English marketing copy for a Chinese menu item.
+
+The dish facts below are authoritative and must not be contradicted.
+Use them as the source of truth.
+
+Goal:
+- Create dynamic, dish-specific English marketing copy.
+- Do not output generic copy that could fit every dish.
+- Keep the copy commercially strong and appetizing.
+- Do not invent awards, rankings, or unverifiable claims.
+- Do not invent ingredients not listed below.
+
+Return JSON only with this exact structure:
+{
+  "headline_en": "5-10 word marketing headline",
+  "description_en": "40-60 word persuasive menu description",
+  "marketing_hooks": [
+    "6-14 word hook from flavor angle",
+    "6-14 word hook from signature angle",
+    "6-14 word hook from craving or reorder angle"
+  ],
+  "instagram_caption": "1-2 sentence Instagram-ready caption with at most 2 emojis",
+  "doordash_caption": "4-10 word delivery-platform hook",
+  "unique_selling_points": [
+    "specific selling point 1",
+    "specific selling point 2",
+    "specific selling point 3"
+  ],
+  "pairing_suggestions": [
+    "one practical pairing suggestion",
+    "optional second pairing suggestion"
+  ],
+  "tags": ["up to 5 short tags"]
+}
+
+Dish facts:
+${JSON.stringify(input, null, 2)}`
+
+  const result = await model.generateContent(prompt)
+  const text = result.response.text()
+
+  try {
+    return parseJsonResponse<StandardDishMarketingOutput>(text)
+  } catch {
+    const repaired = await repairJsonWithGemini(text, 'standard dish marketing JSON')
+    return parseJsonResponse<StandardDishMarketingOutput>(repaired)
   }
 }
 
