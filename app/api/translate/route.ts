@@ -193,10 +193,13 @@ async function buildResultFromGemini(
     descriptionMarketingCn,
     marketingHeadlineCn,
     marketingDescriptionCn,
+    pairingSuggestionsCn,
+    tagsCn,
     marketingHooksCn,
     instagramCaptionCn,
     doordashCaptionCn,
     uniqueSellingPointsCn,
+    fdaNotesCn,
   ] = await Promise.all([
     translateDescriptionToChinese(llmResult.description_short, llmResult.name_en, resolvedDishNameCn),
     translateDescriptionToChinese(
@@ -214,6 +217,8 @@ async function buildResultFromGemini(
       llmResult.name_en,
       resolvedDishNameCn
     ),
+    translateListToChinese(llmResult.pairing_suggestions || [], llmResult.name_en, resolvedDishNameCn),
+    translateListToChinese(llmResult.tags || [], llmResult.name_en, resolvedDishNameCn),
     translateListToChinese(llmResult.marketing_hooks?.en || [], llmResult.name_en, resolvedDishNameCn),
     translateDescriptionToChinese(
       llmResult.social_media_captions?.instagram_en || '',
@@ -226,6 +231,7 @@ async function buildResultFromGemini(
       resolvedDishNameCn
     ),
     translateListToChinese(llmResult.unique_selling_points || [], llmResult.name_en, resolvedDishNameCn),
+    translateListToChinese(llmResult.fda_notes || [], llmResult.name_en, resolvedDishNameCn),
   ])
 
   return {
@@ -287,7 +293,7 @@ async function buildResultFromGemini(
         }),
       ].filter(Boolean),
       notes: llmResult.fda_notes || [],
-      notes_cn: buildChineseNotes(llmResult.fda_notes_cn, llmResult.fda_notes || []),
+      notes_cn: fdaNotesCn.length > 0 ? fdaNotesCn : buildChineseNotes(undefined, llmResult.fda_notes || []),
     },
     marketing: {
       headline_en: llmResult.marketing_headline_en,
@@ -295,13 +301,12 @@ async function buildResultFromGemini(
       description_en: llmResult.marketing_description_en,
       description_cn: marketingDescriptionCn,
       pairing_suggestions: llmResult.pairing_suggestions || [],
-      pairing_suggestions_cn: buildChineseTextList(
-        llmResult.pairing_suggestions_cn,
-        llmResult.pairing_suggestions || [],
-        '推荐搭配米饭或清爽饮品'
-      ),
+      pairing_suggestions_cn:
+        pairingSuggestionsCn.length > 0
+          ? pairingSuggestionsCn
+          : buildChineseTextList(undefined, llmResult.pairing_suggestions || [], '推荐搭配米饭或清爽饮品'),
       tags: llmResult.tags || [],
-      tags_cn: buildChineseTextList(llmResult.tags_cn, llmResult.tags || [], '招牌推荐'),
+      tags_cn: tagsCn.length > 0 ? tagsCn : buildChineseTextList(undefined, llmResult.tags || [], '招牌推荐'),
       marketing_hooks: {
         en: llmResult.marketing_hooks?.en || [],
         cn: marketingHooksCn,
