@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { translationEngine } from '@/lib/translation-engine'
 import {
   translateDish,
-  translateDescriptionToChinese,
   generateStandardDishMarketing,
-  ensureChineseMatchesEnglish,
-  ensureChineseListMatchesEnglish,
+  translateTextsToChinese,
 } from '@/lib/gemini'
 import { detectAllergens } from '@/lib/allergens'
 import { generateId } from '@/lib/utils'
@@ -63,50 +61,36 @@ async function buildResultFromStandardDish(
   const ingredients = dish.ingredients_standard
   const allergenResult = detectAllergens(ingredients)
   const englishMarketing = await buildDynamicMarketingForStandardDish(dish)
+  const englishSegments = [
+    dish.description_short,
+    dish.description_marketing,
+    englishMarketing.headline_en,
+    englishMarketing.description_en,
+    ...englishMarketing.pairing_suggestions,
+    ...englishMarketing.marketing_hooks,
+    englishMarketing.instagram_caption,
+    englishMarketing.doordash_caption,
+    ...englishMarketing.unique_selling_points,
+  ]
 
-  const [
-    descriptionShortCn,
-    descriptionMarketingCn,
-    headlineCn,
-    marketingDescriptionCn,
-    pairingSuggestionsCn,
-    marketingHooksCn,
-    instagramCaptionCn,
-    doordashCaptionCn,
-    uniqueSellingPointsCn,
-  ] = await Promise.all([
-    translateDescriptionToChinese(dish.description_short, dish.name_en_standard, dish.name_cn),
-    translateDescriptionToChinese(dish.description_marketing, dish.name_en_standard, dish.name_cn),
-    translateDescriptionToChinese(englishMarketing.headline_en, dish.name_en_standard, dish.name_cn),
-    translateDescriptionToChinese(englishMarketing.description_en, dish.name_en_standard, dish.name_cn),
-    translateListToChinese(englishMarketing.pairing_suggestions, dish.name_en_standard, dish.name_cn),
-    translateListToChinese(englishMarketing.marketing_hooks, dish.name_en_standard, dish.name_cn),
-    translateDescriptionToChinese(englishMarketing.instagram_caption, dish.name_en_standard, dish.name_cn),
-    translateDescriptionToChinese(englishMarketing.doordash_caption, dish.name_en_standard, dish.name_cn),
-    translateListToChinese(englishMarketing.unique_selling_points, dish.name_en_standard, dish.name_cn),
-  ])
+  const translatedSegments = await translateTextsToChinese(
+    englishSegments,
+    dish.name_en_standard,
+    dish.name_cn
+  )
 
-  const [
-    alignedDescriptionShortCn,
-    alignedDescriptionMarketingCn,
-    alignedHeadlineCn,
-    alignedMarketingDescriptionCn,
-    alignedPairingSuggestionsCn,
-    alignedMarketingHooksCn,
-    alignedInstagramCaptionCn,
-    alignedDoordashCaptionCn,
-    alignedUniqueSellingPointsCn,
-  ] = await Promise.all([
-    ensureChineseMatchesEnglish(dish.description_short, descriptionShortCn, dish.name_en_standard, dish.name_cn),
-    ensureChineseMatchesEnglish(dish.description_marketing, descriptionMarketingCn, dish.name_en_standard, dish.name_cn),
-    ensureChineseMatchesEnglish(englishMarketing.headline_en, headlineCn, dish.name_en_standard, dish.name_cn),
-    ensureChineseMatchesEnglish(englishMarketing.description_en, marketingDescriptionCn, dish.name_en_standard, dish.name_cn),
-    ensureChineseListMatchesEnglish(englishMarketing.pairing_suggestions, pairingSuggestionsCn, dish.name_en_standard, dish.name_cn),
-    ensureChineseListMatchesEnglish(englishMarketing.marketing_hooks, marketingHooksCn, dish.name_en_standard, dish.name_cn),
-    ensureChineseMatchesEnglish(englishMarketing.instagram_caption, instagramCaptionCn, dish.name_en_standard, dish.name_cn),
-    ensureChineseMatchesEnglish(englishMarketing.doordash_caption, doordashCaptionCn, dish.name_en_standard, dish.name_cn),
-    ensureChineseListMatchesEnglish(englishMarketing.unique_selling_points, uniqueSellingPointsCn, dish.name_en_standard, dish.name_cn),
-  ])
+  let cursor = 0
+  const alignedDescriptionShortCn = translatedSegments[cursor++] || ''
+  const alignedDescriptionMarketingCn = translatedSegments[cursor++] || ''
+  const alignedHeadlineCn = translatedSegments[cursor++] || ''
+  const alignedMarketingDescriptionCn = translatedSegments[cursor++] || ''
+  const alignedPairingSuggestionsCn = translatedSegments.slice(cursor, cursor + englishMarketing.pairing_suggestions.length)
+  cursor += englishMarketing.pairing_suggestions.length
+  const alignedMarketingHooksCn = translatedSegments.slice(cursor, cursor + englishMarketing.marketing_hooks.length)
+  cursor += englishMarketing.marketing_hooks.length
+  const alignedInstagramCaptionCn = translatedSegments[cursor++] || ''
+  const alignedDoordashCaptionCn = translatedSegments[cursor++] || ''
+  const alignedUniqueSellingPointsCn = translatedSegments.slice(cursor, cursor + englishMarketing.unique_selling_points.length)
 
   const matchType = engineResult.type === 'exact_match' ? 'exact' : 'semantic'
 
@@ -211,78 +195,42 @@ async function buildResultFromGemini(
   const allergenResult = detectAllergens(llmResult.ingredients)
   const similarDishes = engineResult?.similar_dishes?.map((s) => s.dish.name_en_standard) || []
   const resolvedDishNameCn = llmResult.name_cn || dishName
+  const englishSegments = [
+    llmResult.description_short,
+    llmResult.description_marketing,
+    llmResult.marketing_headline_en,
+    llmResult.marketing_description_en,
+    ...(llmResult.pairing_suggestions || []),
+    ...(llmResult.tags || []),
+    ...(llmResult.marketing_hooks?.en || []),
+    llmResult.social_media_captions?.instagram_en || '',
+    llmResult.social_media_captions?.doordash_en || '',
+    ...(llmResult.unique_selling_points || []),
+    ...(llmResult.fda_notes || []),
+  ]
 
-  const [
-    descriptionShortCn,
-    descriptionMarketingCn,
-    marketingHeadlineCn,
-    marketingDescriptionCn,
-    pairingSuggestionsCn,
-    tagsCn,
-    marketingHooksCn,
-    instagramCaptionCn,
-    doordashCaptionCn,
-    uniqueSellingPointsCn,
-    fdaNotesCn,
-  ] = await Promise.all([
-    translateDescriptionToChinese(llmResult.description_short, llmResult.name_en, resolvedDishNameCn),
-    translateDescriptionToChinese(
-      llmResult.description_marketing,
-      llmResult.name_en,
-      resolvedDishNameCn
-    ),
-    translateDescriptionToChinese(
-      llmResult.marketing_headline_en,
-      llmResult.name_en,
-      resolvedDishNameCn
-    ),
-    translateDescriptionToChinese(
-      llmResult.marketing_description_en,
-      llmResult.name_en,
-      resolvedDishNameCn
-    ),
-    translateListToChinese(llmResult.pairing_suggestions || [], llmResult.name_en, resolvedDishNameCn),
-    translateListToChinese(llmResult.tags || [], llmResult.name_en, resolvedDishNameCn),
-    translateListToChinese(llmResult.marketing_hooks?.en || [], llmResult.name_en, resolvedDishNameCn),
-    translateDescriptionToChinese(
-      llmResult.social_media_captions?.instagram_en || '',
-      llmResult.name_en,
-      resolvedDishNameCn
-    ),
-    translateDescriptionToChinese(
-      llmResult.social_media_captions?.doordash_en || '',
-      llmResult.name_en,
-      resolvedDishNameCn
-    ),
-    translateListToChinese(llmResult.unique_selling_points || [], llmResult.name_en, resolvedDishNameCn),
-    translateListToChinese(llmResult.fda_notes || [], llmResult.name_en, resolvedDishNameCn),
-  ])
+  const translatedSegments = await translateTextsToChinese(
+    englishSegments,
+    llmResult.name_en,
+    resolvedDishNameCn
+  )
 
-  const [
-    alignedDescriptionShortCn,
-    alignedDescriptionMarketingCn,
-    alignedMarketingHeadlineCn,
-    alignedMarketingDescriptionCn,
-    alignedPairingSuggestionsCn,
-    alignedTagsCn,
-    alignedMarketingHooksCn,
-    alignedInstagramCaptionCn,
-    alignedDoordashCaptionCn,
-    alignedUniqueSellingPointsCn,
-    alignedFdaNotesCn,
-  ] = await Promise.all([
-    ensureChineseMatchesEnglish(llmResult.description_short, descriptionShortCn, llmResult.name_en, resolvedDishNameCn),
-    ensureChineseMatchesEnglish(llmResult.description_marketing, descriptionMarketingCn, llmResult.name_en, resolvedDishNameCn),
-    ensureChineseMatchesEnglish(llmResult.marketing_headline_en, marketingHeadlineCn, llmResult.name_en, resolvedDishNameCn),
-    ensureChineseMatchesEnglish(llmResult.marketing_description_en, marketingDescriptionCn, llmResult.name_en, resolvedDishNameCn),
-    ensureChineseListMatchesEnglish(llmResult.pairing_suggestions || [], pairingSuggestionsCn, llmResult.name_en, resolvedDishNameCn),
-    ensureChineseListMatchesEnglish(llmResult.tags || [], tagsCn, llmResult.name_en, resolvedDishNameCn),
-    ensureChineseListMatchesEnglish(llmResult.marketing_hooks?.en || [], marketingHooksCn, llmResult.name_en, resolvedDishNameCn),
-    ensureChineseMatchesEnglish(llmResult.social_media_captions?.instagram_en || '', instagramCaptionCn, llmResult.name_en, resolvedDishNameCn),
-    ensureChineseMatchesEnglish(llmResult.social_media_captions?.doordash_en || '', doordashCaptionCn, llmResult.name_en, resolvedDishNameCn),
-    ensureChineseListMatchesEnglish(llmResult.unique_selling_points || [], uniqueSellingPointsCn, llmResult.name_en, resolvedDishNameCn),
-    ensureChineseListMatchesEnglish(llmResult.fda_notes || [], fdaNotesCn, llmResult.name_en, resolvedDishNameCn),
-  ])
+  let cursor = 0
+  const alignedDescriptionShortCn = translatedSegments[cursor++] || ''
+  const alignedDescriptionMarketingCn = translatedSegments[cursor++] || ''
+  const alignedMarketingHeadlineCn = translatedSegments[cursor++] || ''
+  const alignedMarketingDescriptionCn = translatedSegments[cursor++] || ''
+  const alignedPairingSuggestionsCn = translatedSegments.slice(cursor, cursor + (llmResult.pairing_suggestions?.length || 0))
+  cursor += llmResult.pairing_suggestions?.length || 0
+  const alignedTagsCn = translatedSegments.slice(cursor, cursor + (llmResult.tags?.length || 0))
+  cursor += llmResult.tags?.length || 0
+  const alignedMarketingHooksCn = translatedSegments.slice(cursor, cursor + (llmResult.marketing_hooks?.en?.length || 0))
+  cursor += llmResult.marketing_hooks?.en?.length || 0
+  const alignedInstagramCaptionCn = translatedSegments[cursor++] || ''
+  const alignedDoordashCaptionCn = translatedSegments[cursor++] || ''
+  const alignedUniqueSellingPointsCn = translatedSegments.slice(cursor, cursor + (llmResult.unique_selling_points?.length || 0))
+  cursor += llmResult.unique_selling_points?.length || 0
+  const alignedFdaNotesCn = translatedSegments.slice(cursor, cursor + (llmResult.fda_notes?.length || 0))
 
   return {
     dish: {
@@ -568,19 +516,6 @@ function buildChineseNotes(chineseNotes: string[] | undefined, englishNotes: str
 
   return englishNotes.map(
     (note) => translateCommonEnglishToChinese(note) || '请咨询门店确认详细说明'
-  )
-}
-
-async function translateListToChinese(
-  values: string[],
-  dishNameEn: string,
-  dishNameCn: string
-): Promise<string[]> {
-  return Promise.all(
-    values.map(async (value) => {
-      if (!value.trim()) return ''
-      return translateDescriptionToChinese(value, dishNameEn, dishNameCn)
-    })
   )
 }
 

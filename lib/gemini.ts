@@ -522,56 +522,66 @@ export async function translateDescriptionToChinese(englishText: string, dishNam
   return lastCandidate
 }
 
-export async function ensureChineseMatchesEnglish(
-  englishText: string,
-  chineseText: string,
+export async function translateTextsToChinese(
+  englishTexts: string[],
   dishName: string,
   dishNameCn: string
-): Promise<string> {
-  if (!englishText?.trim()) return ''
+): Promise<string[]> {
+  if (!englishTexts.length) return []
 
-  const normalizedCandidate = normalizeChineseTranslation(chineseText)
-  const localIssues = getChineseTranslationIssues(normalizedCandidate, englishText)
+  const normalizedTexts = englishTexts.map((text) => String(text || '').trim())
+  const nonEmptyTexts = normalizedTexts.filter(Boolean)
+  if (nonEmptyTexts.length === 0) {
+    return normalizedTexts.map(() => '')
+  }
 
   const model = getGeminiClient().getGenerativeModel({
     model: 'gemini-2.5-flash',
     generationConfig: {
       temperature: 0.05,
-      maxOutputTokens: 768,
+      maxOutputTokens: 2048,
+      responseMimeType: 'application/json',
     },
   })
 
-  if (normalizedCandidate && localIssues.length === 0) {
-    const review = await reviewChineseTranslation(
-      model,
-      englishText,
-      normalizedCandidate,
-      dishName,
-      dishNameCn
-    )
+  const prompt = `Translate each English menu text below into Chinese.
 
-    if (review.pass) {
-      return normalizedCandidate
-    }
-  }
+English is the ONLY source of truth.
+For every item:
+- keep the meaning complete,
+- do not shorten,
+- do not summarize,
+- do not leave English words untranslated unless they are unavoidable brand names,
+- return natural Chinese only.
 
-  return translateDescriptionToChinese(englishText, dishName, dishNameCn)
+Dish: ${dishNameCn} (${dishName})
+
+Return JSON only in this exact format:
+{
+  "translations": ["item 1 chinese", "item 2 chinese"]
 }
 
-export async function ensureChineseListMatchesEnglish(
-  englishValues: string[],
-  chineseValues: string[],
-  dishName: string,
-  dishNameCn: string
-): Promise<string[]> {
+English items:
+${JSON.stringify(normalizedTexts)}`
+
+  try {
+    const result = await model.generateContent(prompt)
+    const parsed = parseJsonResponse<{ translations?: string[] }>(result.response.text())
+    const translations = Array.isArray(parsed.translations) ? parsed.translations : []
+
+    if (translations.length === normalizedTexts.length) {
+      return translations.map((item, index) => {
+        const text = normalizeChineseTranslation(item)
+        return text || normalizedTexts[index]
+      })
+    }
+  } catch {
+    // Fall through to per-item translation fallback.
+  }
+
   return Promise.all(
-    englishValues.map((englishValue, index) =>
-      ensureChineseMatchesEnglish(
-        englishValue,
-        chineseValues[index] || '',
-        dishName,
-        dishNameCn
-      )
+    normalizedTexts.map((englishText) =>
+      englishText ? translateDescriptionToChinese(englishText, dishName, dishNameCn) : ''
     )
   )
 }
