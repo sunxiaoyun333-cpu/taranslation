@@ -522,6 +522,60 @@ export async function translateDescriptionToChinese(englishText: string, dishNam
   return lastCandidate
 }
 
+export async function ensureChineseMatchesEnglish(
+  englishText: string,
+  chineseText: string,
+  dishName: string,
+  dishNameCn: string
+): Promise<string> {
+  if (!englishText?.trim()) return ''
+
+  const normalizedCandidate = normalizeChineseTranslation(chineseText)
+  const localIssues = getChineseTranslationIssues(normalizedCandidate, englishText)
+
+  const model = getGeminiClient().getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    generationConfig: {
+      temperature: 0.05,
+      maxOutputTokens: 768,
+    },
+  })
+
+  if (normalizedCandidate && localIssues.length === 0) {
+    const review = await reviewChineseTranslation(
+      model,
+      englishText,
+      normalizedCandidate,
+      dishName,
+      dishNameCn
+    )
+
+    if (review.pass) {
+      return normalizedCandidate
+    }
+  }
+
+  return translateDescriptionToChinese(englishText, dishName, dishNameCn)
+}
+
+export async function ensureChineseListMatchesEnglish(
+  englishValues: string[],
+  chineseValues: string[],
+  dishName: string,
+  dishNameCn: string
+): Promise<string[]> {
+  return Promise.all(
+    englishValues.map((englishValue, index) =>
+      ensureChineseMatchesEnglish(
+        englishValue,
+        chineseValues[index] || '',
+        dishName,
+        dishNameCn
+      )
+    )
+  )
+}
+
 function buildStrictChineseTranslationPrompt(
   englishText: string,
   dishName: string,
